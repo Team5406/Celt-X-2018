@@ -14,6 +14,7 @@ import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.Solenoid;
 import org.cafirst.frc.team5406.util.XboxController;
 import com.ctre.phoenix.motorcontrol.ControlMode;
+import edu.wpi.first.wpilibj.Notifier;
 
 
 /**
@@ -49,27 +50,50 @@ public class Robot extends IterativeRobot {
 	double speed = 0;
 	DifferentialDrive _drive = new DifferentialDrive(_frontLeftMotor, _frontRightMotor);
     Solenoid elevatorSolenoid;
-    Solenoid gripSolenoid;
+    Solenoid gripSolenoidLow;
+    Solenoid gripSolenoidHigh;
     Solenoid wristSolenoid;
-    
-
+    int flipWrist = 0;
+    int gripCounter = 0;
 	int autoLoop = 0;
 	int step =0;
 	
     private XboxController driverGamepad;
+    private XboxController operatorGamepad;
 
+    class PeriodicRunnable implements java.lang.Runnable {
+	    public void run() {  
+	    	double _pos = _wristMotor.getActiveTrajectoryPosition();
+	    	if (_pos > 500 && flipWrist==1) {
+	    		    	wristSolenoid.set(true);
+	    		    	flipWrist = 2;
+	    		    	
+	    	}
+	    	if (_pos < 5000 && flipWrist==3) {
+		    	wristSolenoid.set(false);
+		    	flipWrist = 4;
+	    	}
+	    	/*if (_pos > 6000 && flipWrist==2) {
+		    	wristSolenoid.set(false);
+		    	flipWrist = 0;
+	    	}*/
+	    	}
+	}
+	Notifier _notifier = new Notifier(new PeriodicRunnable());
+	
     /**
      * This function is run when the robot is first started up and should be
      * used for any initialization code.
      */
     public void robotInit() {
-    	gripSolenoid = new Solenoid(3);
-    	elevatorSolenoid = new Solenoid(1);
+    	gripSolenoidHigh = new Solenoid(3);
+    	elevatorSolenoid = new Solenoid(0); //1
     	wristSolenoid = new Solenoid(2);
+    	gripSolenoidLow = new Solenoid(1); //0
 
     	driverGamepad = new XboxController(0);
+    	operatorGamepad = new XboxController(1);
 
-    	
     	/* take our extra talons and just have them follow the Talons updated in arcadeDrive */
     	_leftSlave1.follow(_frontLeftMotor);
     	_leftSlave2.follow(_frontLeftMotor);
@@ -101,22 +125,16 @@ public class Robot extends IterativeRobot {
 		_frontRightMotor.configPeakCurrentLimit(30, 0);
 		_frontRightMotor.configPeakCurrentDuration(30, 0);
 		_frontRightMotor.enableCurrentLimit(true);
+		_wristMotor.configContinuousCurrentLimit(40, 0);
+		_wristMotor.configPeakCurrentLimit(40, 0);
+		_wristMotor.configPeakCurrentDuration(40, 0);
+		_wristMotor.enableCurrentLimit(true);
 
     	_elevatorMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
 		_elevatorMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
 		_wristMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
 		_wristMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
 
-		 
-		/*_frontLeftMotor.configOpenloopRamp(0.05, 0);
-		_leftSlave1.configOpenloopRamp(0, 0); // no need since master ramps 
-		_leftSlave2.configOpenloopRamp(0, 0); // no need since master ramps 
-		_leftSlave3.configOpenloopRamp(0, 0); // no need since master ramps 
-		_frontRightMotor.configOpenloopRamp(0.05, 0);
-		_rightSlave1.configOpenloopRamp(0, 0); // no need since master ramps
-		_rightSlave2.configOpenloopRamp(0, 0); // no need since master ramps
-		_rightSlave3.configOpenloopRamp(0, 0); // no need since master ramps*/
-		
     	int kTimeoutMs = 10;
     	_wristMotor.selectProfileSlot(0,0);
     	_wristMotor.config_kF(0, 0.2, kTimeoutMs);
@@ -160,54 +178,79 @@ public class Robot extends IterativeRobot {
     public void teleopPeriodic() {
         _drive.arcadeDrive(driverGamepad.getLeftY(), driverGamepad.getLeftX());
 
-		if(driverGamepad.getButtonHeld(XboxController.Y_BUTTON)){
+		if(operatorGamepad.getButtonHeld(XboxController.X_BUTTON)){
 			elevatorDown();
 			wristUp();
-			gripSolenoid.set(true);
+			gripSolenoidHigh.set(true);
 			elevatorSolenoid.set(false);
 			wristSolenoid.set(false);
         }
 		
-		if(driverGamepad.getButtonHeld(XboxController.B_BUTTON)){
+		if(operatorGamepad.getButtonHeld(XboxController.B_BUTTON)){
 			wristDown();
 			elevatorUp();
-			gripSolenoid.set(true);
+			gripSolenoidHigh.set(true);
 			elevatorSolenoid.set(false);
 			wristSolenoid.set(false);
 		}
 		
 		
-		if(driverGamepad.getButtonHeld(XboxController.A_BUTTON)){
+		if(operatorGamepad.getButtonHeld(XboxController.A_BUTTON)){
 			wristDown();
 			elevatorDown();
-			gripSolenoid.set(true);
+			gripSolenoidHigh.set(true);
 			elevatorSolenoid.set(false);
-			wristSolenoid.set(false);
+			flipWrist =3;
+			_notifier.startPeriodic(0.005);
+			
+
 		}
 		
-		if(driverGamepad.getButtonHeld(XboxController.X_BUTTON)){
+		if(operatorGamepad.getButtonHeld(XboxController.Y_BUTTON)){
 			wristUp();
 			elevatorUp();
-			gripSolenoid.set(true);
+			gripSolenoidHigh.set(true);
 			elevatorSolenoid.set(false);
-			wristSolenoid.set(false);
+			flipWrist =1;
+			_notifier.startPeriodic(0.005);
+			//wristSolenoid.set(true);
+			//wristSolenoid.set(true);
 		}
 		
 		
-		if(driverGamepad.getLeftTriggerPressed()){
+		if(operatorGamepad.getLeftTriggerPressed()){
 			_intakeMotor.set(0.8);
-        }else if(driverGamepad.getRightTriggerPressed()) {
+        }else if(operatorGamepad.getRightTriggerPressed()) {
         	_intakeMotor.set(-1);
         }else {
         	_intakeMotor.set(0);
         }
 	   
-		if(driverGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)){
-			gripSolenoid.set(false);
+		
+		switch(operatorGamepad.getDirectionPad()){
+		case UP:
+			gripSolenoidHigh.set(true);
+			gripSolenoidLow.set(true);
+			break;
+		case DOWN:
+			gripSolenoidHigh.set(false);
+			gripSolenoidLow.set(false);
+			break;
+		case LEFT:
+			gripSolenoidHigh.set(true);
+			gripSolenoidLow.set(false);
+			break;
+		case RIGHT:
+			gripSolenoidHigh.set(false);
+			gripSolenoidLow.set(true);
+			break;
+		case NONE:
 		}
-		if(driverGamepad.getButtonHeld(XboxController.LEFT_BUMPER)){
+
+		if(operatorGamepad.getButtonHeld(XboxController.LEFT_BUMPER)){
 			wristSolenoid.set(true);
-		}else {
+		}
+		if(operatorGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)){
 			wristSolenoid.set(false);
 		}
 		
