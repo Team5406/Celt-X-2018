@@ -183,7 +183,7 @@ public class Robot extends IterativeRobot {
 			wristUp();
 			gripSolenoidHigh.set(true);
 			elevatorSolenoid.set(false);
-			wristSolenoid.set(false);
+			wristSolenoid.set(true);
         }
 		
 		if(operatorGamepad.getButtonHeld(XboxController.B_BUTTON)){
@@ -191,7 +191,7 @@ public class Robot extends IterativeRobot {
 			elevatorUp();
 			gripSolenoidHigh.set(true);
 			elevatorSolenoid.set(false);
-			wristSolenoid.set(false);
+			wristSolenoid.set(true);
 		}
 		
 		
@@ -200,9 +200,10 @@ public class Robot extends IterativeRobot {
 			elevatorDown();
 			gripSolenoidHigh.set(true);
 			elevatorSolenoid.set(false);
-			flipWrist =3;
-			_notifier.startPeriodic(0.005);
-			
+			/*flipWrist =3;
+			_notifier.startPeriodic(0.005);*/
+			wristSolenoid.set(true);
+
 
 		}
 		
@@ -211,9 +212,9 @@ public class Robot extends IterativeRobot {
 			elevatorUp();
 			gripSolenoidHigh.set(true);
 			elevatorSolenoid.set(false);
-			flipWrist =1;
-			_notifier.startPeriodic(0.005);
-			//wristSolenoid.set(true);
+			/*flipWrist =1;
+			_notifier.startPeriodic(0.005);*/
+			wristSolenoid.set(true);
 			//wristSolenoid.set(true);
 		}
 		
@@ -251,7 +252,11 @@ public class Robot extends IterativeRobot {
 			wristSolenoid.set(true);
 		}
 		if(operatorGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)){
-			wristSolenoid.set(false);
+				wristDown();
+				elevatorDown();
+				gripSolenoidHigh.set(true);
+				elevatorSolenoid.set(false);
+				wristSolenoid.set(false);
 		}
 		
     }
