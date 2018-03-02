@@ -9,6 +9,8 @@ package org.cafirst.frc.team5406.robot;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.StatusFrameEnhanced;
 import com.ctre.phoenix.motorcontrol.can.*;
+
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.Solenoid;
@@ -16,6 +18,7 @@ import org.cafirst.frc.team5406.util.XboxController;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.PowerDistributionPanel;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -38,12 +41,20 @@ public class Robot extends IterativeRobot {
 	WPI_VictorSPX _rightSlave3 = new WPI_VictorSPX(8); //right drive
 	
 	WPI_TalonSRX _intakeMotor= new WPI_TalonSRX(10);
-	WPI_VictorSPX _intakeSlave1 = new WPI_VictorSPX(9);
+	
+	/*Comp Bot has a Victor for ID #9 - Intake, Practice Bot has a Talon*/
+	//WPI_VictorSPX _intakeSlave1 = new WPI_VictorSPX(9);
+	WPI_TalonSRX _intakeSlave1 = new WPI_TalonSRX(9);
+
+	
 	WPI_TalonSRX _elevatorMotor= new WPI_TalonSRX(12); //
 	WPI_VictorSPX _elevatorSlave1 = new WPI_VictorSPX(11);
 	WPI_TalonSRX _armMotor = new WPI_TalonSRX(13); //arm motor
 	WPI_TalonSRX _wristMotor= new WPI_TalonSRX(14);
-
+	
+	PowerDistributionPanel pdp = new PowerDistributionPanel();
+	public static int PRACTICE_BOT = 0; //jumper to short pins on practice bot
+	public static DigitalInput practiceBot = new DigitalInput(PRACTICE_BOT);
 
 
 	double speed = 0;
@@ -56,6 +67,19 @@ public class Robot extends IterativeRobot {
     int gripCounter = 0;
 	int autoLoop = 0;
 	int step =0;
+	int stepA = 0;
+	boolean elevTestShift = false;
+	int[] pdpSlots = {
+			4,  //left 1
+			0,  //left 2
+			2,  //left 3
+			1,  //left 4
+			11, //right 1
+			14, //right 2
+			15, //right 3
+			13  //right 4
+	};
+	
 	
 	boolean armUp = false;
 	boolean elevatorUp = false;
@@ -63,32 +87,49 @@ public class Robot extends IterativeRobot {
 	int testCounter = 0;
 	double motorCurrentSum = 0;
 	int motorCurrentCount = 0;
+	long testPeriodicCounter = 0;
 	long motorEncoder = 0;
 	int motorDirection = 1;
 	boolean buttonPress = false;
 	
+	boolean isPracticeBot = false;
+	
     private XboxController driverGamepad;
     private XboxController operatorGamepad;
+    
+    boolean manualElevator = false;
+    
+    boolean gripSpin = false;
 
-/*    class PeriodicRunnable implements java.lang.Runnable {
-	    public void run() {  
-	    	double _pos = _armMotor.getActiveTrajectoryPosition();
-	    	if (_pos > 500 && flipWrist==1) {
-	    		    	wristUp()
-	    		    	flipWrist = 2;
-	    		    	
+    class PeriodicRunnable implements java.lang.Runnable {
+	    public void run() { 
+	    	//shoulder = 155 deg
+	    	//wrist = 90 deg
+	    /*wrist up
+	     * arm to 105
+	     * wrist down
+	     * arm all the way up
+	     */
+	    	switch (flipWrist) {
+		    	case 1:
+		    		double _pos = _armMotor.getActiveTrajectoryPosition();
+			    	if (_pos > 3500) {
+			        	_armMotor.set(ControlMode.MotionMagic, _pos);
+				    	wristDown();
+				    	flipWrist = 2;
+			    	}
+			    	break;
+		    	case 2:
+		    		double _pos2 = _wristMotor.getActiveTrajectoryPosition();
+		    		if(_pos2 > 2500) {
+		    			armUp();
+		    			flipWrist = 3;
+		    		}
+		    		break;
 	    	}
-	    	if (_pos < 5000 && flipWrist==3) {
-		    	wristDown();
-		    	flipWrist = 4;
-	    	}
-	    	if (_pos > 6000 && flipWrist==2) {
-		    	wristSolenoid.set(false);
-		    	flipWrist = 0;
-	    	}
-	    	}
+	    }
 	}
-	Notifier _notifier = new Notifier(new PeriodicRunnable());*/
+	Notifier _notifier = new Notifier(new PeriodicRunnable());
 	public void setupMotors() {
 		_leftSlave1.follow(_frontLeftMotor);
     	_leftSlave2.follow(_frontLeftMotor);
@@ -157,11 +198,12 @@ public class Robot extends IterativeRobot {
     	_wristMotor.configMotionAcceleration(2000, kTimeoutMs);
 		/* zero the sensor */
     	_wristMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+    	_wristMotor.set(ControlMode.PercentOutput, 0);
 
     	
     	_armMotor.selectProfileSlot(0,0);
-    	_armMotor.config_kF(0, 0.2, kTimeoutMs);
-    	_armMotor.config_kP(0, 0.2, kTimeoutMs);
+    	_armMotor.config_kF(0, 0.4, kTimeoutMs);
+    	_armMotor.config_kP(0, 0.4, kTimeoutMs);
     	_armMotor.config_kI(0, 0, kTimeoutMs);
     	_armMotor.config_kD(0, 0, kTimeoutMs);
     	_armMotor.selectProfileSlot(1,0);
@@ -170,10 +212,12 @@ public class Robot extends IterativeRobot {
     	_armMotor.config_kI(1, 0, kTimeoutMs);
     	_armMotor.config_kD(1, 0, kTimeoutMs);
 		/* set acceleration and vcruise velocity - see documentation */
-    	_armMotor.configMotionCruiseVelocity(1500, kTimeoutMs);
-    	_armMotor.configMotionAcceleration(2500, kTimeoutMs);
+    	_armMotor.configMotionCruiseVelocity(2000, kTimeoutMs);
+    	_armMotor.configMotionAcceleration(2000, kTimeoutMs);
 		/* zero the sensor */
     	_armMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+    	_armMotor.set(ControlMode.PercentOutput, 0);
+
     	
     	//Elevator Up
     	_elevatorMotor.selectProfileSlot(0,0);
@@ -193,6 +237,8 @@ public class Robot extends IterativeRobot {
     	_elevatorMotor.configMotionAcceleration(125000, kTimeoutMs);
 		/* zero the sensor */
     	_elevatorMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+    	_elevatorMotor.set(ControlMode.PercentOutput, 0);
+
 
 	}
 	
@@ -206,13 +252,28 @@ public class Robot extends IterativeRobot {
     	wristSolenoid = new Solenoid(2);
     	gripSolenoidLow = new Solenoid(0);
 
-    	driverGamepad = new XboxController(0);
-    	operatorGamepad = new XboxController(1);
+    	driverGamepad = new XboxController(1);
+    	operatorGamepad = new XboxController(0);
 
     	/* take our extra talons and just have them follow the Talons updated in arcadeDrive */
    	
+
+    	isPracticeBot = !practiceBot.get();
+    	    	
+    	if(isPracticeBot) {
+    	System.out.println("I am a practice bot.");  		
+    	}
+    	else {
+    		System.out.println("Identity crisis. I am not a practice bot.");
+    	}
+    	
     	setupMotors();
     
+    }
+    public void disabledInit() {
+    	_elevatorMotor.set(ControlMode.PercentOutput, 0);
+    	_wristMotor.set(ControlMode.PercentOutput, 0);
+    	_armMotor.set(ControlMode.PercentOutput, 0);
     }
     
     public void teleopInit() {
@@ -224,6 +285,7 @@ public class Robot extends IterativeRobot {
      */
     
     public void teleopPeriodic() {
+    	
     	double precisionDriveX;
     	double precisionDriveY;
     	
@@ -239,39 +301,43 @@ public class Robot extends IterativeRobot {
         	precisionDriveY = 1;
         }
 		
+		
+		
+		if(driverGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)){
+			if(Math.abs(driverGamepad.getRightY())>0.05 ) {
+				elevatorSlow();
+				_elevatorMotor.set(driverGamepad.getRightY());
+				manualElevator = true;
+			}
+		}else if(Math.abs(operatorGamepad.getRightY())>0.05 ) {
+				elevatorSlow();
+				_elevatorMotor.set(operatorGamepad.getRightY());
+				manualElevator = true;
+		} else if (manualElevator) {
+			manualElevator = false;
+			_elevatorMotor.set(0);
+		}
+
+		
         _drive.arcadeDrive(precisionDriveY*driverGamepad.getLeftY(), precisionDriveX*driverGamepad.getLeftX());
 
-    	SmartDashboard.putNumber("Left Drive 1", _frontLeftMotor.getOutputCurrent());
-    	SmartDashboard.putNumber("Left Drive 2", _leftSlave1.getOutputCurrent());
-    	SmartDashboard.putNumber("Left Drive 3", _leftSlave2.getOutputCurrent());
-    	SmartDashboard.putNumber("Left Drive 4", _leftSlave3.getOutputCurrent());
-    	SmartDashboard.putNumber("Right Drive 1", _frontRightMotor.getOutputCurrent());
-    	SmartDashboard.putNumber("Right Drive 2", _rightSlave1.getOutputCurrent());
-    	SmartDashboard.putNumber("Right Drive 3", _rightSlave2.getOutputCurrent());
-    	SmartDashboard.putNumber("Right Drive 4", _rightSlave3.getOutputCurrent());
- 	
+        displayCurrent();
     	
-		if(driverGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)){
-			elevatorSolenoid.set(true);
-			_elevatorMotor.set(driverGamepad.getRightY());
-        }
 
 		
 		if(operatorGamepad.getButtonHeld(XboxController.X_BUTTON)){
-			/*gripFirm();
+			gripFirm();
 			elevatorDown();
 			armUp();
-			elevatorSolenoid.set(false);
-			wristSolenoid.set(true);*/
-			wristUp();
+			elevatorFast();
+			wristDown();
         }
 		
 		if(operatorGamepad.getButtonHeld(XboxController.B_BUTTON)){
-			/*gripFirm();
+			gripFirm();
 			armDown();
 			elevatorUp();
-			elevatorSolenoid.set(false);
-			wristSolenoid.set(true);*/
+			elevatorFast();
 			wristDown();
 		}
 		
@@ -280,23 +346,21 @@ public class Robot extends IterativeRobot {
 			gripFirm();
 			armDown();
 			elevatorDown();
-			elevatorSolenoid.set(false);
+			elevatorFast();
 			/*flipWrist =3;
 			_notifier.startPeriodic(0.005);*/
-			wristSolenoid.set(true);
-
-
+			wristDown();
 		}
 		
 		if(operatorGamepad.getButtonHeld(XboxController.Y_BUTTON)){
 			gripFirm();
+			wristUp();
 			armUp();
-			elevatorUp();
-			elevatorSolenoid.set(false);
+			elevatorSwitchMid();
+			elevatorFast();
 			/*flipWrist =1;
 			_notifier.startPeriodic(0.005);*/
-			wristSolenoid.set(true);
-			//wristSolenoid.set(true);
+			wristDown();
 		}
 		
 		
@@ -308,7 +372,9 @@ public class Robot extends IterativeRobot {
         		gripLight();
         	}
         }else {
-        	_intakeMotor.set(-0.3);
+        	if(!gripSpin) {
+        		_intakeMotor.set(-0.3);
+        	}
         }
 	   
 		
@@ -329,15 +395,16 @@ public class Robot extends IterativeRobot {
 		}
 
 		if(operatorGamepad.getButtonHeld(XboxController.LEFT_BUMPER)){
-				elevatorSolenoid.set(true);
-				elevatorDown();
+				//elevatorFast();
+				//elevatorDown();
+				wristDown();
 		}
 		if(operatorGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)){
-				armDown();
-				elevatorDown();
+				//armDown();
+				//elevatorDown();
 				gripFirm();
-				elevatorSolenoid.set(false);
-				wristSolenoid.set(false);
+				//elevatorFast();
+				wristUp();
 		}
 		
 		
@@ -355,22 +422,36 @@ public class Robot extends IterativeRobot {
     	speed =0;
     	step =0;
     }
+    
+    
+    public void elevatorFast() {
+    	elevatorSolenoid.set(false);
+    }
+    
+    public void elevatorSlow() {
+    	elevatorSolenoid.set(true);
+    }
     public void gripLight() {
 		gripSolenoidHigh.set(true);
 		gripSolenoidLow.set(false);
+		gripSpin = false;
     }
     public void gripFirm() {
     	gripSolenoidHigh.set(false);
 		gripSolenoidLow.set(false);
 		_intakeMotor.set(-0.3);
+		gripSpin = false;
     }
     public void gripOpen() {
     	gripSolenoidHigh.set(true);
 		gripSolenoidLow.set(true);
+		_intakeMotor.set(-0.7);
+		gripSpin = true;
     }
     public void gripNeutral() {
     	gripSolenoidHigh.set(false);
 		gripSolenoidLow.set(true);
+		gripSpin = false;
         }
         
      	
@@ -387,12 +468,12 @@ public class Robot extends IterativeRobot {
     
     public void wristUp() {
     	_wristMotor.selectProfileSlot(0,0);
-    	_wristMotor.set(ControlMode.MotionMagic, 0);
+    	_wristMotor.set(ControlMode.MotionMagic, -475);
     	wristUp = true;
     }
     public void wristDown() {
     	_wristMotor.selectProfileSlot(1,0);
-    	_wristMotor.set(ControlMode.MotionMagic, 2500);
+    	_wristMotor.set(ControlMode.MotionMagic, -2700);
     	wristUp = false;
     }
 
@@ -401,47 +482,121 @@ public class Robot extends IterativeRobot {
     	_elevatorMotor.set(ControlMode.MotionMagic, 215000);
     	elevatorUp = true;
     }
+    public void elevatorSwitchMid() {
+    	_elevatorMotor.selectProfileSlot(0,0);
+    	_elevatorMotor.set(ControlMode.MotionMagic, 150000);
+    	elevatorUp = true;
+    }
+
     public void elevatorDown() {
     	_elevatorMotor.selectProfileSlot(1,0);
     	_elevatorMotor.set(ControlMode.MotionMagic, 1000);
     	elevatorUp = false;
     	
     }
-    public void autonomousPeriodic() {
-    	/*
+    
+    public void displayCurrent() {
+    	   	SmartDashboard.putNumber("Left Drive 1", pdp.getCurrent(pdpSlots[0]));
+        	SmartDashboard.putNumber("Left Drive 2", pdp.getCurrent(pdpSlots[1]));
+        	SmartDashboard.putNumber("Left Drive 3", pdp.getCurrent(pdpSlots[2]));
+        	SmartDashboard.putNumber("Left Drive 4", pdp.getCurrent(pdpSlots[3]));
+        	SmartDashboard.putNumber("Right Drive 1", pdp.getCurrent(pdpSlots[4]));
+        	SmartDashboard.putNumber("Right Drive 2", pdp.getCurrent(pdpSlots[5]));
+        	SmartDashboard.putNumber("Right Drive 3", pdp.getCurrent(pdpSlots[6]));
+        	SmartDashboard.putNumber("Right Drive 4", pdp.getCurrent(pdpSlots[7]));
+    }
+   public void autonomousPeriodic() {
+    	
     	double positionLeft = _frontLeftMotor.getSelectedSensorPosition(0);
     	double positionRight = _frontRightMotor.getSelectedSensorPosition(0);
     	
     	switch(step) {
     	case 0:
-    		speed+=0.015;
-    		if (positionRight>2000) {
-    			step =1;
-    		}
-    		break;
+    		wristDown();
+    		elevatorUp();
+    		step = 1;
     	case 1:
-    		speed = 0.7;
-    		if(positionRight > 28000) {
+    		speed+=0.015;
+    		if (positionLeft>10000) {
     			step =2;
     		}
     		break;
     	case 2:
-    		speed-=0.015;
-    		if(positionRight > 33800 || speed <=0.1) {
+    		speed = 0.7;
+    		if(positionLeft > 35000) {
     			step =3;
     		}
     		break;
     	case 3:
-    		
-    		if(positionRight > 34200) {
+    		speed-=0.05;
+    		if(positionLeft > 45000 || speed <=0.1) {
+    			step =4;
+    		}
+    		break;
+    	case 4:
+    		if(positionLeft > 43000) {
     			speed = -0.1;
+        		_intakeMotor.set(0.8);
     		}else {
     			speed=0;
+    			step = 5;
     		}
-    		break;    	 	
+    		break;   
+    	case 5:
+    		_intakeMotor.set(0.8);
     	}
-    	System.out.println(positionRight);*/
-    	//_drive.tankDrive(0.5,0.5);
+    	System.out.println(positionRight);
+    	_drive.tankDrive(speed,speed);
+    	/*switch(stepA) {
+    	case 0:
+	    	switch(step) {
+	    	case 0:
+	    		wristUp();
+	    		elevatorUp();
+	    		step = 1;
+	    	case 1:
+	    		speed+=0.015;
+	    		if (positionLeft>16133) {
+	    			step =1;
+	    		}
+	    		break;
+	    	case 2:
+	    		speed = 0.7;
+	    		if(positionLeft > 190000) {
+	    			step =2;
+	    		}
+	    		break;
+	    	case 3:
+	    		speed-=0.015;
+	    		if(positionLeft > 207000 || speed <=0.1) {
+	    			step =3;
+	    		}
+	    		break;
+	    	case 4:
+	    		
+	    		if(positionLeft > 208000) {
+	    			speed = -0.1;
+	    		}else {
+	    			speed=0;
+	    			step = 5;
+	    			stepA = 1;
+	    		}
+	    		break;   
+	    	}
+	    	_drive.tankDrive(speed,speed);
+    	break;
+    	case 1:
+    		if(positionLeft < 250000) {
+    			_drive.tankDrive(0.3,0.5);
+    		}else {
+            	_drive.tankDrive(0,0);
+            	stepA = 2;
+    		}
+    		break;
+    	case 2:
+    		_intakeMotor.set(0.5);
+    		break;
+    	}*/
     	
     }
     public void testInit() {
@@ -459,6 +614,7 @@ public class Robot extends IterativeRobot {
     }
     
     public void testPeriodic() {
+    	testPeriodicCounter++;
     	if(operatorGamepad.getRawButtonPressed(XboxController.A_BUTTON)) {
     			testCounter++;
 
@@ -482,6 +638,7 @@ public class Robot extends IterativeRobot {
 	    		_armMotor.set(0);
 	    		_intakeMotor.set(0);
 	    		_intakeSlave1.set(0);
+	    		_wristMotor.set(0);
 	    		motorCurrentSum = 0;
 	    		motorCurrentCount = 0;
     		
@@ -502,12 +659,13 @@ public class Robot extends IterativeRobot {
 	    		}
 	    		_frontLeftMotor.set(motorDirection*.5); 
 	    		motorCurrentCount++;
-	    		motorCurrentSum += _frontLeftMotor.getOutputCurrent();
+	    		motorCurrentSum += pdp.getCurrent(pdpSlots[0]);
 	    		break;
 	    	
 	    	case 2: //Left Slave Motor 1
 	    		motorEncoder = _frontLeftMotor.getSelectedSensorPosition(0);
 	    		if(Math.abs(motorEncoder) > 40000) {
+	    			elevatorSolenoid.set(false);
 	    			_frontLeftMotor.setSelectedSensorPosition(0, 0, 10);
 	    	    	motorDirection *= -1;
 	    	    	System.out.println("Reached 40000 ticks, switching direction");
@@ -518,7 +676,7 @@ public class Robot extends IterativeRobot {
 	    		}
 	    		_leftSlave1.set(motorDirection*.5); 
 	    		motorCurrentCount++;
-	    		motorCurrentSum += _leftSlave1.getOutputCurrent();
+	    		motorCurrentSum += pdp.getCurrent(pdpSlots[1]);
 	    		break;
 	    		
 	    	case 3: //Left Slave Motor 2
@@ -534,7 +692,7 @@ public class Robot extends IterativeRobot {
 	    		}
 	    		_leftSlave2.set(motorDirection*.5); 
 	    		motorCurrentCount++;
-	    		motorCurrentSum += _leftSlave2.getOutputCurrent();
+	    		motorCurrentSum += pdp.getCurrent(pdpSlots[2]);
 	    		break;
 	    		
 	    	case 4: //Left Slave Motor 3
@@ -550,7 +708,7 @@ public class Robot extends IterativeRobot {
 	    		}
 	    		_leftSlave3.set(motorDirection*.5); 
 	    		motorCurrentCount++;
-	    		motorCurrentSum += _leftSlave3.getOutputCurrent();
+	    		motorCurrentSum += pdp.getCurrent(pdpSlots[3]);
 	    		break;
 	    		
 	    	
@@ -567,7 +725,7 @@ public class Robot extends IterativeRobot {
 	    		}
 	    		_frontRightMotor.set(motorDirection*.5); 
 	    		motorCurrentCount++;
-	    		motorCurrentSum += _frontRightMotor.getOutputCurrent();
+	    		motorCurrentSum += pdp.getCurrent(pdpSlots[4]);
 	    		break;
 	    		
 	    	case 6: //Right Slave Motor 1
@@ -583,7 +741,7 @@ public class Robot extends IterativeRobot {
 	    		}
 	    		_rightSlave1.set(motorDirection*.5); 
 	    		motorCurrentCount++;
-	    		motorCurrentSum += _rightSlave1.getOutputCurrent();
+	    		motorCurrentSum += pdp.getCurrent(pdpSlots[5]);
 	    		break;
 	    		
 	    	case 7: //Right Slave Motor 2
@@ -599,7 +757,7 @@ public class Robot extends IterativeRobot {
 	    		}
 	    		_rightSlave2.set(motorDirection*.5); 
 	    		motorCurrentCount++;
-	    		motorCurrentSum += _rightSlave2.getOutputCurrent();
+	    		motorCurrentSum += pdp.getCurrent(pdpSlots[6]);
 	    		break;
 	    		
 	    	case 8: //Right Slave Motor 3
@@ -615,12 +773,30 @@ public class Robot extends IterativeRobot {
 	    		}
 	    		_rightSlave3.set(motorDirection*.5); 
 	    		motorCurrentCount++;
-	    		motorCurrentSum += _rightSlave3.getOutputCurrent();
+	    		motorCurrentSum += pdp.getCurrent(pdpSlots[7]);
 	    		break;
-	    		
-	    	case 9: //Elevator Motor
+	    	case 9: //Wrist Motor
+	    		motorEncoder = _wristMotor.getSelectedSensorPosition(0);
+	    		if(motorEncoder > 2000) {
+	    	    	motorDirection = -1;
+	    	    	System.out.println("Reached 2500 ticks, switching direction");
+	    		}else if(motorEncoder < 1000) {
+	    	    	motorDirection = 1;
+	    	    	System.out.println("Reached 100 ticks, switching direction");
+	    		}
+	    		if(motorCurrentCount==0) {
+		    		System.out.println("Powering wrist motor. [Desc: " + _wristMotor.getDescription() + ", Name: " +_wristMotor.getName() + " ID: " +_wristMotor.getDeviceID());	    		
+		    		System.out.println("Voltage: " + _wristMotor.getBusVoltage());	
+	    		}
+	    		_wristMotor.set(motorDirection*.5); 
+	    		motorCurrentCount++;
+	    		motorCurrentSum += _wristMotor.getOutputCurrent();
+	    		break;
+	    	case 10: //Elevator Motor
+	    		elevatorSolenoid.set(false);
 	    		motorEncoder = _elevatorMotor.getSelectedSensorPosition(0);
 	    		if(motorEncoder > 150000) {
+	    			elevatorSolenoid.set(!elevTestShift);
 	    	    	motorDirection = -1;
 	    	    	System.out.println("Reached 150000 ticks, switching direction");
 	    		}else if(motorEncoder < 25000) {
@@ -631,14 +807,16 @@ public class Robot extends IterativeRobot {
 		    		System.out.println("Powering elevator motor. [Desc: " + _elevatorMotor.getDescription() + ", Name: " +_elevatorMotor.getName() + " ID: " +_elevatorMotor.getDeviceID());	    		
 		    		System.out.println("Voltage: " + _elevatorMotor.getBusVoltage());	
 	    		}
-	    		_elevatorMotor.set(motorDirection*.5); 
+	    		_elevatorMotor.set(motorDirection*.6); 
 	    		motorCurrentCount++;
 	    		motorCurrentSum += _elevatorMotor.getOutputCurrent();
 	    		break;
 	    		
-	    	case 10: //Elevator Slave 1
+	    	case 11: //Elevator Slave 1
+	    		elevatorSolenoid.set(false);
 	    		motorEncoder = _elevatorMotor.getSelectedSensorPosition(0);
 	    		if(motorEncoder > 150000) {
+	    			elevatorSolenoid.set(!elevTestShift);
 	    	    	motorDirection = -1;
 	    	    	System.out.println("Reached 150000 ticks, switching direction");
 	    		}else if(motorEncoder < 25000) {
@@ -649,15 +827,15 @@ public class Robot extends IterativeRobot {
 		    		System.out.println("Powering elevator slave 1. [Desc: " + _elevatorSlave1.getDescription() + ", Name: " +_elevatorSlave1.getName() + " ID: " +_elevatorSlave1.getDeviceID());	    		
 		    		System.out.println("Voltage: " + _elevatorSlave1.getBusVoltage());	
 	    		}
-	    		_elevatorSlave1.set(motorDirection*.5); 
+	    		_elevatorSlave1.set(motorDirection*.6); 
 	    		motorCurrentCount++;
 	    		motorCurrentSum += _elevatorSlave1.getOutputCurrent();
 	    		break;
 	    		
-	    	case 11: //Arm Motor
+	    	case 12: //Arm Motor
 	    		motorEncoder = _armMotor.getSelectedSensorPosition(0);
 				wristSolenoid.set(true);
-	    		if(motorEncoder > 5000) {
+	    		if(motorEncoder > 3000) {
 	    			//_armMotor.setSelectedSensorPosition(0, 0, 10);
 	    	    	motorDirection = -1;
 	    	    	System.out.println("Reached 5000 ticks, switching direction");
@@ -669,12 +847,12 @@ public class Robot extends IterativeRobot {
 		    		System.out.println("Powering arm motor. [Desc: " + _armMotor.getDescription() + ", Name: " +_armMotor.getName() + " ID: " +_armMotor.getDeviceID());	    		
 		    		System.out.println("Voltage: " + _armMotor.getBusVoltage());	
 	    		}
-	    		_armMotor.set(motorDirection*.5); 
+	    		_armMotor.set(motorDirection*.4); 
 	    		motorCurrentCount++;
 	    		motorCurrentSum += _armMotor.getOutputCurrent();
 	    		break;
 	    		
-	    	case 12: //Intake Motor
+	    	case 13: //Intake Motor
 	    		motorEncoder = _intakeMotor.getSelectedSensorPosition(0);
 	    		if(Math.abs(motorEncoder) > 40000) {
 	    			_intakeMotor.setSelectedSensorPosition(0, 0, 10);
@@ -690,7 +868,7 @@ public class Robot extends IterativeRobot {
 	    		motorCurrentSum += _intakeMotor.getOutputCurrent();
 	    		break;
 	    		
-	    	case 13: //Intake Slave 1
+	    	case 14: //Intake Slave 1
 	    		motorEncoder = _intakeMotor.getSelectedSensorPosition(0);
 	    		if(Math.abs(motorEncoder) > 40000) {
 	    			_intakeMotor.setSelectedSensorPosition(0, 0, 10);
@@ -705,7 +883,18 @@ public class Robot extends IterativeRobot {
 	    		motorCurrentCount++;
 	    		motorCurrentSum += _intakeSlave1.getOutputCurrent();
 	    		break;
-	    	case 14:
+	    	case 15:
+	    		//open, wait 1s, close firm, wait 1s, close light, wait 1s, repeat
+	    		if(testPeriodicCounter % 150 ==100) {
+	    			gripLight();
+	    		}else if(testPeriodicCounter % 150 ==50) {
+	    			gripFirm();
+	    		}else if(testPeriodicCounter % 150 ==0) {
+	    			gripOpen();
+	    			testPeriodicCounter=0;
+	    		}
+	    		break;
+	    	case 16:
 	  	    		System.out.println("Testing done.");
 	  	    		testCounter++;
 	  	    		break;
@@ -713,5 +902,5 @@ public class Robot extends IterativeRobot {
     	}
     
     }
-    
+   
 }
