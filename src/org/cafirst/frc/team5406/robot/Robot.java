@@ -91,13 +91,14 @@ public class Robot extends IterativeRobot {
 	long motorEncoder = 0;
 	int motorDirection = 1;
 	boolean buttonPress = false;
-	
+	int kTimeoutMs = 10;
 	boolean isPracticeBot = false;
 	
     private XboxController driverGamepad;
     private XboxController operatorGamepad;
     
     boolean manualElevator = false;
+    boolean manualWrist = false;
     
     boolean gripSpin = false;
 
@@ -154,13 +155,13 @@ public class Robot extends IterativeRobot {
 		_frontRightMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
 		_frontLeftMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
 		_frontLeftMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
-		_frontLeftMotor.configContinuousCurrentLimit(30, 0);
-		_frontLeftMotor.configPeakCurrentLimit(30, 0);
-		_frontLeftMotor.configPeakCurrentDuration(30, 0);
+		_frontLeftMotor.configContinuousCurrentLimit(25, 0);
+		//_frontLeftMotor.configPeakCurrentLimit(30, 0);
+		//_frontLeftMotor.configPeakCurrentDuration(30, 0);
 		_frontLeftMotor.enableCurrentLimit(true);
-		_frontRightMotor.configContinuousCurrentLimit(30, 0);
-		_frontRightMotor.configPeakCurrentLimit(30, 0);
-		_frontRightMotor.configPeakCurrentDuration(30, 0);
+		_frontRightMotor.configContinuousCurrentLimit(25, 0);
+		//_frontRightMotor.configPeakCurrentLimit(30, 0);
+		//_frontRightMotor.configPeakCurrentDuration(30, 0);
 		_frontRightMotor.enableCurrentLimit(true);
 		_armMotor.configContinuousCurrentLimit(40, 0);
 		_armMotor.configPeakCurrentLimit(40, 0);
@@ -182,7 +183,6 @@ public class Robot extends IterativeRobot {
 		_wristMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
 		_wristMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
 
-    	int kTimeoutMs = 10;
     	_wristMotor.selectProfileSlot(0,0);
     	_wristMotor.config_kF(0, 1, kTimeoutMs);
     	_wristMotor.config_kP(0, 0.25, kTimeoutMs);
@@ -319,11 +319,24 @@ public class Robot extends IterativeRobot {
 		}
 
 		
+		if(Math.abs(operatorGamepad.getLeftY())>0.05 ) {
+			_wristMotor.set(operatorGamepad.getLeftY());
+			manualWrist = true;
+	} else if (manualWrist) {
+		manualWrist = false;
+		_wristMotor.set(0);
+	}
+		
         _drive.arcadeDrive(precisionDriveY*driverGamepad.getLeftY(), precisionDriveX*driverGamepad.getLeftX());
 
         displayCurrent();
     	
+        if(operatorGamepad.getButtonHeld(XboxController.LEFT_STICK)&&operatorGamepad.getButtonHeld(XboxController.RIGHT_STICK)) {
+        	_elevatorMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+        	_wristMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+        	_armMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
 
+        }
 		
 		if(operatorGamepad.getButtonHeld(XboxController.X_BUTTON)){
 			gripFirm();
@@ -371,6 +384,9 @@ public class Robot extends IterativeRobot {
         	if(armUp == false && elevatorUp == false) {
         		gripLight();
         	}
+        }else if(operatorGamepad.getButtonHeld(XboxController.LEFT_BUMPER)){
+			//wristDown();
+		_intakeMotor.set(0.5);
         }else {
         	if(!gripSpin) {
         		_intakeMotor.set(-0.3);
@@ -394,11 +410,7 @@ public class Robot extends IterativeRobot {
 		case NONE:
 		}
 
-		if(operatorGamepad.getButtonHeld(XboxController.LEFT_BUMPER)){
-				//elevatorFast();
-				//elevatorDown();
-				wristDown();
-		}
+
 		if(operatorGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)){
 				//armDown();
 				//elevatorDown();
@@ -440,12 +452,15 @@ public class Robot extends IterativeRobot {
     	gripSolenoidHigh.set(false);
 		gripSolenoidLow.set(false);
 		_intakeMotor.set(-0.3);
+    	if(armUp == false && wristUp == false && elevatorUp == false) {
+    		wristSlightUp();
+    	}
 		gripSpin = false;
     }
     public void gripOpen() {
     	gripSolenoidHigh.set(true);
 		gripSolenoidLow.set(true);
-		_intakeMotor.set(-0.7);
+		//_intakeMotor.set(-0.7);
 		gripSpin = true;
     }
     public void gripNeutral() {
@@ -466,15 +481,23 @@ public class Robot extends IterativeRobot {
     	armUp = false;
     }
     
+    public void wristSlightUp() {
+    	_wristMotor.selectProfileSlot(0,0);
+    	_wristMotor.set(ControlMode.MotionMagic, -2200);
+    	wristUp = false;
+    	manualWrist = false;
+    }
     public void wristUp() {
     	_wristMotor.selectProfileSlot(0,0);
     	_wristMotor.set(ControlMode.MotionMagic, -475);
     	wristUp = true;
+    	manualWrist = false;
     }
     public void wristDown() {
     	_wristMotor.selectProfileSlot(1,0);
     	_wristMotor.set(ControlMode.MotionMagic, -2700);
     	wristUp = false;
+    	manualWrist = false;
     }
 
     public void elevatorUp() {
