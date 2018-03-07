@@ -14,6 +14,11 @@ import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.Solenoid;
+
+import org.cafirst.frc.team5406.util.CX_WPI_TalonSRX;
+import org.cafirst.frc.team5406.util.CX_WPI_VictorSPX;
+import org.cafirst.frc.team5406.util.Motors;
+import org.cafirst.frc.team5406.util.Motors.Motor;
 import org.cafirst.frc.team5406.util.XboxController;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import edu.wpi.first.wpilibj.Notifier;
@@ -28,17 +33,18 @@ import edu.wpi.first.wpilibj.PowerDistributionPanel;
  * directory.
  */
 public class Robot extends IterativeRobot {
-
 	
-	WPI_TalonSRX _frontLeftMotor = new WPI_TalonSRX(1); //drive
-	WPI_VictorSPX _leftSlave1 = new WPI_VictorSPX(2); //left drive
-	WPI_VictorSPX _leftSlave2 = new WPI_VictorSPX(3);
-	WPI_VictorSPX _leftSlave3 = new WPI_VictorSPX(4);
+	DrivetrainCurrentMonitor currentMonitor;
 	
-	WPI_TalonSRX _frontRightMotor = new WPI_TalonSRX(5);
-	WPI_VictorSPX _rightSlave1 = new WPI_VictorSPX(6);
-	WPI_VictorSPX _rightSlave2 = new WPI_VictorSPX(7);
-	WPI_VictorSPX _rightSlave3 = new WPI_VictorSPX(8); //right drive
+	CX_WPI_TalonSRX _frontLeftMotor = new CX_WPI_TalonSRX(1); //drive
+	CX_WPI_VictorSPX _leftSlave1 = new CX_WPI_VictorSPX(2); //left drive
+	CX_WPI_VictorSPX _leftSlave2 = new CX_WPI_VictorSPX(3);
+	CX_WPI_VictorSPX _leftSlave3 = new CX_WPI_VictorSPX(4);
+	
+	CX_WPI_TalonSRX _frontRightMotor = new CX_WPI_TalonSRX(5);
+	CX_WPI_VictorSPX _rightSlave1 = new CX_WPI_VictorSPX(6);
+	CX_WPI_VictorSPX _rightSlave2 = new CX_WPI_VictorSPX(7);
+	CX_WPI_VictorSPX _rightSlave3 = new CX_WPI_VictorSPX(8); //right drive
 	
 	WPI_TalonSRX _intakeMotor= new WPI_TalonSRX(10);
 	
@@ -319,7 +325,6 @@ public class Robot extends IterativeRobot {
 
     	driverGamepad = new XboxController(1);
     	operatorGamepad = new XboxController(0);
-
     	/* take our extra talons and just have them follow the Talons updated in arcadeDrive */
    	
 
@@ -333,6 +338,8 @@ public class Robot extends IterativeRobot {
     	}
     	
     	setupMotors();
+
+    	currentMonitor = new DrivetrainCurrentMonitor(_frontLeftMotor, _frontRightMotor, Motors.CIM, 4);
     
     }
     public void disabledInit() {
