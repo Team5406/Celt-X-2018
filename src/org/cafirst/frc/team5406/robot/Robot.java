@@ -68,6 +68,7 @@ public class Robot extends IterativeRobot {
 	int autoLoop = 0;
 	int step =0;
 	int stepA = 0;
+	boolean disabled = true;
 	boolean elevTestShift = false;
 	int[] pdpSlots = {
 			4,  //left 1
@@ -79,6 +80,32 @@ public class Robot extends IterativeRobot {
 			15, //right 3
 			13  //right 4
 	};
+	
+	public enum GripState {
+	    FIRM,
+	    LIGHT,
+	    OPEN
+	}
+	
+	public enum ArmState {
+	    UP,
+	    DOWN
+	}
+	
+	public enum WristState {
+	    UP,
+	    DOWN
+	}
+	
+	public enum ElevatorState {
+	    UP,
+	    DOWN
+	}
+	
+	GripState gripState = GripState.FIRM;
+	ArmState armState = ArmState.DOWN;
+	ElevatorState elevatorState = ElevatorState.DOWN;
+	WristState wristState = WristState.UP;
 	
 	
 	boolean armUp = false;
@@ -99,6 +126,11 @@ public class Robot extends IterativeRobot {
     
     boolean manualElevator = false;
     boolean manualWrist = false;
+	boolean elevatorOverride = false;
+	boolean wristOverride = false;
+	boolean wristZeroed = false;
+	boolean armZeroed = false;
+	boolean elevatorZeroed = false;
     
     boolean gripSpin = false;
 
@@ -112,7 +144,22 @@ public class Robot extends IterativeRobot {
 	     * arm all the way up
 	     */
 	    	switch (flipWrist) {
-		    	case 1:
+	    	case 1:
+		    	if(_armMotor.getSelectedSensorPosition(0) > 5000) {
+		    		flipWrist = 2;
+		    		wristDown();
+		    	}
+		    	break;
+	    	case 2:
+		    	if(_armMotor.getSelectedSensorPosition(0) < 500) {
+		    		flipWrist = 3;
+		    		wristUp();
+		    	}
+		    	break;
+	    	
+
+	    	
+		    	/*case 1:
 		    		double _pos = _armMotor.getActiveTrajectoryPosition();
 			    	if (_pos > 3500) {
 			        	_armMotor.set(ControlMode.MotionMagic, _pos);
@@ -126,120 +173,138 @@ public class Robot extends IterativeRobot {
 		    			armUp();
 		    			flipWrist = 3;
 		    		}
-		    		break;
+		    		break;*/
 	    	}
 	    }
 	}
 	Notifier _notifier = new Notifier(new PeriodicRunnable());
 	public void setupMotors() {
-		_leftSlave1.follow(_frontLeftMotor);
-    	_leftSlave2.follow(_frontLeftMotor);
-    	_leftSlave3.follow(_frontLeftMotor);
-    	_rightSlave1.follow(_frontRightMotor);
-    	_rightSlave2.follow(_frontRightMotor);
-    	_rightSlave3.follow(_frontRightMotor);
+		if(disabled) {
+			disabled = false;	
+			_leftSlave1.follow(_frontLeftMotor);
+	    	_leftSlave2.follow(_frontLeftMotor);
+	    	_leftSlave3.follow(_frontLeftMotor);
+	    	_rightSlave1.follow(_frontRightMotor);
+	    	_rightSlave2.follow(_frontRightMotor);
+	    	_rightSlave3.follow(_frontRightMotor);
+	    	
+	    	_elevatorSlave1.follow(_elevatorMotor);
+	    	_intakeSlave1.follow(_intakeMotor);
+	    	_intakeSlave1.setInverted(true);
+	    	
+	    	_armMotor.setSensorPhase(false);
+	    	_wristMotor.setSensorPhase(false);
+	
+	    	autoLoop = 0;
+	    	/*_leftSlave1.setInverted(true);
+	    	_leftSlave2.setInverted(true);
+	    	_rightSlave1.setInverted(true);
+	    	_rightSlave2.setInverted(true);*/
+	    	_frontRightMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
+			_frontRightMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
+			_frontLeftMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
+			_frontLeftMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
+			_frontLeftMotor.configContinuousCurrentLimit(25, 0);
+			//_frontLeftMotor.configPeakCurrentLimit(30, 0);
+			//_frontLeftMotor.configPeakCurrentDuration(30, 0);
+			_frontLeftMotor.enableCurrentLimit(true);
+			_frontRightMotor.configContinuousCurrentLimit(25, 0);
+			//_frontRightMotor.configPeakCurrentLimit(30, 0);
+			//_frontRightMotor.configPeakCurrentDuration(30, 0);
+			_frontRightMotor.enableCurrentLimit(true);
+			_armMotor.configContinuousCurrentLimit(40, 0);
+			_armMotor.configPeakCurrentLimit(40, 0);
+			_armMotor.configPeakCurrentDuration(40, 0);
+			_armMotor.enableCurrentLimit(true);
+			_intakeMotor.configContinuousCurrentLimit(40, 0);
+			_intakeMotor.configPeakCurrentLimit(40, 0);
+			_intakeMotor.configPeakCurrentDuration(40, 0);
+			_intakeMotor.enableCurrentLimit(true);
+			_wristMotor.configContinuousCurrentLimit(30, 0);
+			_wristMotor.configPeakCurrentLimit(30, 0);
+			_wristMotor.configPeakCurrentDuration(30, 0);
+			_wristMotor.enableCurrentLimit(true);
+	
+	    	_elevatorMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
+			_elevatorMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
+			_armMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
+			_armMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
+			_wristMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
+			_wristMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
+	
+	    	_wristMotor.selectProfileSlot(0,0);
+	    	_wristMotor.config_kF(0, 1, kTimeoutMs);
+	    	_wristMotor.config_kP(0, 0.25, kTimeoutMs);
+	    	_wristMotor.config_kI(0, 0, kTimeoutMs);
+	    	_wristMotor.config_kD(0, 0, kTimeoutMs);
+	    	_wristMotor.selectProfileSlot(1,0);
+	    	_wristMotor.config_kF(1, .1, kTimeoutMs);
+	    	_wristMotor.config_kP(1, 1, kTimeoutMs);
+	    	_wristMotor.config_kI(1, 0, kTimeoutMs);
+	    	_wristMotor.config_kD(1, 1.5, kTimeoutMs);
+			/* set acceleration and vcruise velocity - see documentation */
+	    	_wristMotor.configMotionCruiseVelocity(4000, kTimeoutMs);
+	    	_wristMotor.configMotionAcceleration(2000, kTimeoutMs);
+			/* zero the sensor */
+	    	_wristMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+	    	_wristMotor.set(ControlMode.PercentOutput, 0);
+	
+	    	
+	    	_armMotor.selectProfileSlot(0,0);
+	    	_armMotor.config_kF(0, 0.4, kTimeoutMs);
+	    	_armMotor.config_kP(0, 0.4, kTimeoutMs);
+	    	_armMotor.config_kI(0, 0, kTimeoutMs);
+	    	_armMotor.config_kD(0, 0, kTimeoutMs);
+	    	_armMotor.selectProfileSlot(1,0);
+	    	_armMotor.config_kF(1, 0.2, kTimeoutMs);
+	    	_armMotor.config_kP(1, 0.15, kTimeoutMs);
+	    	_armMotor.config_kI(1, 0, kTimeoutMs);
+	    	_armMotor.config_kD(1, 0, kTimeoutMs);
+			/* set acceleration and vcruise velocity - see documentation */
+	    	_armMotor.configMotionCruiseVelocity(2000, kTimeoutMs);
+	    	_armMotor.configMotionAcceleration(2000, kTimeoutMs);
+			/* zero the sensor */
+	    	_armMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+	    	_armMotor.set(ControlMode.PercentOutput, 0);
+	
+	    	
+	    	//Elevator Up
+	    	_elevatorMotor.selectProfileSlot(0,0);
+	    	_elevatorMotor.config_kF(0, 0.0525, kTimeoutMs);
+	    	_elevatorMotor.config_kP(0, 0.08, kTimeoutMs);
+	    	_elevatorMotor.config_kI(0, 0, kTimeoutMs);
+	    	_elevatorMotor.config_kD(0, 0, kTimeoutMs);
+	    	
+	    	//Elevator Down
+	    	_elevatorMotor.selectProfileSlot(1,0);
+	    	_elevatorMotor.config_kF(1, 0.0525, kTimeoutMs);
+	    	_elevatorMotor.config_kP(1, 0.08, kTimeoutMs);
+	    	_elevatorMotor.config_kI(1, 0, kTimeoutMs);
+	    	_elevatorMotor.config_kD(1, 0, kTimeoutMs);
+			/* set acceleration and vcruise velocity - see documentation */
+	    	_elevatorMotor.configMotionCruiseVelocity(27000, kTimeoutMs);
+	    	_elevatorMotor.configMotionAcceleration(125000, kTimeoutMs);
+			/* zero the sensor */
+	    	_elevatorMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+	    	_elevatorMotor.set(ControlMode.PercentOutput, 0);
+	    	
+	    	
+	    	
+	    	_elevatorMotor.configForwardSoftLimitThreshold(216000, 10);
+	    	_elevatorMotor.configReverseSoftLimitThreshold(0, 10);
+	    	_wristMotor.configForwardSoftLimitThreshold(0, 10);
+	    	_wristMotor.configReverseSoftLimitThreshold(-2700, 10);
+	    	_armMotor.configForwardSoftLimitThreshold(6900, 10);
+	    	_armMotor.configReverseSoftLimitThreshold(0, 10);
+	    	_armMotor.configForwardSoftLimitEnable(true, 10);
+	    	_armMotor.configReverseSoftLimitEnable(true, 10);
+	    	_wristMotor.configForwardSoftLimitEnable(true, 10);
+	    	_wristMotor.configReverseSoftLimitEnable(true, 10);
+	    	_elevatorMotor.configForwardSoftLimitEnable(true, 10);
+	    	_elevatorMotor.configReverseSoftLimitEnable(true, 10);
     	
-    	_elevatorSlave1.follow(_elevatorMotor);
-    	_intakeSlave1.follow(_intakeMotor);
-    	_intakeSlave1.setInverted(true);
-    	
-    	_armMotor.setSensorPhase(false);
-    	_wristMotor.setSensorPhase(false);
 
-    	autoLoop = 0;
-    	/*_leftSlave1.setInverted(true);
-    	_leftSlave2.setInverted(true);
-    	_rightSlave1.setInverted(true);
-    	_rightSlave2.setInverted(true);*/
-    	_frontRightMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
-		_frontRightMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
-		_frontLeftMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
-		_frontLeftMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
-		_frontLeftMotor.configContinuousCurrentLimit(25, 0);
-		//_frontLeftMotor.configPeakCurrentLimit(30, 0);
-		//_frontLeftMotor.configPeakCurrentDuration(30, 0);
-		_frontLeftMotor.enableCurrentLimit(true);
-		_frontRightMotor.configContinuousCurrentLimit(25, 0);
-		//_frontRightMotor.configPeakCurrentLimit(30, 0);
-		//_frontRightMotor.configPeakCurrentDuration(30, 0);
-		_frontRightMotor.enableCurrentLimit(true);
-		_armMotor.configContinuousCurrentLimit(40, 0);
-		_armMotor.configPeakCurrentLimit(40, 0);
-		_armMotor.configPeakCurrentDuration(40, 0);
-		_armMotor.enableCurrentLimit(true);
-		_intakeMotor.configContinuousCurrentLimit(40, 0);
-		_intakeMotor.configPeakCurrentLimit(40, 0);
-		_intakeMotor.configPeakCurrentDuration(40, 0);
-		_intakeMotor.enableCurrentLimit(true);
-		_wristMotor.configContinuousCurrentLimit(30, 0);
-		_wristMotor.configPeakCurrentLimit(30, 0);
-		_wristMotor.configPeakCurrentDuration(30, 0);
-		_wristMotor.enableCurrentLimit(true);
-
-    	_elevatorMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
-		_elevatorMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
-		_armMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
-		_armMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
-		_wristMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
-		_wristMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
-
-    	_wristMotor.selectProfileSlot(0,0);
-    	_wristMotor.config_kF(0, 1, kTimeoutMs);
-    	_wristMotor.config_kP(0, 0.25, kTimeoutMs);
-    	_wristMotor.config_kI(0, 0, kTimeoutMs);
-    	_wristMotor.config_kD(0, 0, kTimeoutMs);
-    	_wristMotor.selectProfileSlot(1,0);
-    	_wristMotor.config_kF(1, .1, kTimeoutMs);
-    	_wristMotor.config_kP(1, 1, kTimeoutMs);
-    	_wristMotor.config_kI(1, 0, kTimeoutMs);
-    	_wristMotor.config_kD(1, 1.5, kTimeoutMs);
-		/* set acceleration and vcruise velocity - see documentation */
-    	_wristMotor.configMotionCruiseVelocity(4000, kTimeoutMs);
-    	_wristMotor.configMotionAcceleration(2000, kTimeoutMs);
-		/* zero the sensor */
-    	_wristMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
-    	_wristMotor.set(ControlMode.PercentOutput, 0);
-
-    	
-    	_armMotor.selectProfileSlot(0,0);
-    	_armMotor.config_kF(0, 0.4, kTimeoutMs);
-    	_armMotor.config_kP(0, 0.4, kTimeoutMs);
-    	_armMotor.config_kI(0, 0, kTimeoutMs);
-    	_armMotor.config_kD(0, 0, kTimeoutMs);
-    	_armMotor.selectProfileSlot(1,0);
-    	_armMotor.config_kF(1, 0.2, kTimeoutMs);
-    	_armMotor.config_kP(1, 0.15, kTimeoutMs);
-    	_armMotor.config_kI(1, 0, kTimeoutMs);
-    	_armMotor.config_kD(1, 0, kTimeoutMs);
-		/* set acceleration and vcruise velocity - see documentation */
-    	_armMotor.configMotionCruiseVelocity(2000, kTimeoutMs);
-    	_armMotor.configMotionAcceleration(2000, kTimeoutMs);
-		/* zero the sensor */
-    	_armMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
-    	_armMotor.set(ControlMode.PercentOutput, 0);
-
-    	
-    	//Elevator Up
-    	_elevatorMotor.selectProfileSlot(0,0);
-    	_elevatorMotor.config_kF(0, 0.0525, kTimeoutMs);
-    	_elevatorMotor.config_kP(0, 0.08, kTimeoutMs);
-    	_elevatorMotor.config_kI(0, 0, kTimeoutMs);
-    	_elevatorMotor.config_kD(0, 0, kTimeoutMs);
-    	
-    	//Elevator Down
-    	_elevatorMotor.selectProfileSlot(1,0);
-    	_elevatorMotor.config_kF(1, 0.0525, kTimeoutMs);
-    	_elevatorMotor.config_kP(1, 0.08, kTimeoutMs);
-    	_elevatorMotor.config_kI(1, 0, kTimeoutMs);
-    	_elevatorMotor.config_kD(1, 0, kTimeoutMs);
-		/* set acceleration and vcruise velocity - see documentation */
-    	_elevatorMotor.configMotionCruiseVelocity(27000, kTimeoutMs);
-    	_elevatorMotor.configMotionAcceleration(125000, kTimeoutMs);
-		/* zero the sensor */
-    	_elevatorMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
-    	_elevatorMotor.set(ControlMode.PercentOutput, 0);
-
-
+		}
 	}
 	
     /**
@@ -271,6 +336,7 @@ public class Robot extends IterativeRobot {
     
     }
     public void disabledInit() {
+    	disabled = true;
     	_elevatorMotor.set(ControlMode.PercentOutput, 0);
     	_wristMotor.set(ControlMode.PercentOutput, 0);
     	_armMotor.set(ControlMode.PercentOutput, 0);
@@ -285,6 +351,47 @@ public class Robot extends IterativeRobot {
      */
     
     public void teleopPeriodic() {
+    	gripState = GripState.FIRM;
+    	boolean wristSet = false;
+		boolean elevatorOverrideNew = false;
+		boolean wristOverrideNew = false;
+
+		/*
+		if(!wristZeroed) {
+			_wristMotor.set(0.5);
+			if(_wristMotor.getOutputCurrent()>25) {
+				_wristMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+				wristUp();
+				wristZeroed = true;
+				wristSet = true;
+			}
+		}
+		
+		if(!armZeroed) {
+			_armMotor.set(-0.5);
+			if(_armMotor.getOutputCurrent()>25) {
+				_armMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+				armDown();
+				armZeroed = true;
+			}
+		}
+		
+		if(!elevatorZeroed) {
+			_elevatorMotor.set(-0.5);
+			if(_elevatorMotor.getOutputCurrent()>25) {
+				_elevatorMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+				elevatorDown();
+				elevatorZeroed = true;
+			}
+		}*/
+
+
+
+    	
+		
+    	/*******************************
+    	 * Driver Controls
+    	 ******************************/
     	
     	double precisionDriveX;
     	double precisionDriveY;
@@ -301,7 +408,9 @@ public class Robot extends IterativeRobot {
         	precisionDriveY = 1;
         }
 		
-		
+        _drive.arcadeDrive(precisionDriveY*driverGamepad.getLeftY(), precisionDriveX*driverGamepad.getLeftX());
+
+        displayCurrent();
 		
 		if(driverGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)){
 			if(Math.abs(driverGamepad.getRightY())>0.05 ) {
@@ -309,64 +418,78 @@ public class Robot extends IterativeRobot {
 				_elevatorMotor.set(driverGamepad.getRightY());
 				manualElevator = true;
 			}
-		}else if(Math.abs(operatorGamepad.getRightY())>0.05 ) {
+			
+		/***************************
+		 * Operator Controls
+		 **************************/
+			
+		}else if(Math.abs(operatorGamepad.getLeftY())>0.05 ) {
 				elevatorSlow();
-				_elevatorMotor.set(operatorGamepad.getRightY());
+				_elevatorMotor.set(operatorGamepad.getLeftY());
 				manualElevator = true;
+				if(operatorGamepad.getButtonHeld(XboxController.START_BUTTON)) {
+					elevatorOverrideNew = true;
+				}
 		} else if (manualElevator) {
 			manualElevator = false;
-			_elevatorMotor.set(0);
+	    	_elevatorMotor.selectProfileSlot(0,0);
+	    	_elevatorMotor.set(ControlMode.MotionMagic, _elevatorMotor.getSelectedSensorPosition(0));
 		}
 
 		
-		if(Math.abs(operatorGamepad.getLeftY())>0.05 ) {
-			_wristMotor.set(operatorGamepad.getLeftY());
+		if(Math.abs(operatorGamepad.getRightY())>0.05 ) {
+			_wristMotor.set(operatorGamepad.getRightY());
 			manualWrist = true;
-	} else if (manualWrist) {
-		manualWrist = false;
-		_wristMotor.set(0);
-	}
+			wristSet = true;
+			if(operatorGamepad.getButtonHeld(XboxController.START_BUTTON)) {
+				wristOverrideNew = true;
+			}
+		} else if (manualWrist) {
+			manualWrist = false;
+			_wristMotor.selectProfileSlot(0,0);
+			_wristMotor.set(ControlMode.MotionMagic, _wristMotor.getSelectedSensorPosition(0));
+			wristSet = true;
+		}
 		
-        _drive.arcadeDrive(precisionDriveY*driverGamepad.getLeftY(), precisionDriveX*driverGamepad.getLeftX());
 
-        displayCurrent();
     	
-        if(operatorGamepad.getButtonHeld(XboxController.LEFT_STICK)&&operatorGamepad.getButtonHeld(XboxController.RIGHT_STICK)) {
+        if(operatorGamepad.getButtonHeld(XboxController.LEFT_STICK)&&operatorGamepad.getButtonHeld(XboxController.START_BUTTON)) {
         	_elevatorMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+         }
+        
+        if(operatorGamepad.getButtonHeld(XboxController.RIGHT_STICK)&&operatorGamepad.getButtonHeld(XboxController.START_BUTTON)) {
         	_wristMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
-        	_armMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
-
-        }
+         }
 		
 		if(operatorGamepad.getButtonHeld(XboxController.X_BUTTON)){
-			gripFirm();
 			elevatorDown();
 			armUp();
 			elevatorFast();
 			wristDown();
+			wristSet = true;
         }
 		
 		if(operatorGamepad.getButtonHeld(XboxController.B_BUTTON)){
-			gripFirm();
 			armDown();
 			elevatorUp();
 			elevatorFast();
 			wristDown();
+			wristSet = true;
 		}
 		
 		
 		if(operatorGamepad.getButtonHeld(XboxController.A_BUTTON)){
-			gripFirm();
 			armDown();
 			elevatorDown();
 			elevatorFast();
-			/*flipWrist =3;
-			_notifier.startPeriodic(0.005);*/
-			wristDown();
+			//wristDown();
+			flipWrist =1;
+			_notifier.startPeriodic(0.005);
+			wristSet = true;
+			manualWrist = true;
 		}
 		
 		if(operatorGamepad.getButtonHeld(XboxController.Y_BUTTON)){
-			gripFirm();
 			wristUp();
 			armUp();
 			elevatorSwitchMid();
@@ -374,27 +497,56 @@ public class Robot extends IterativeRobot {
 			/*flipWrist =1;
 			_notifier.startPeriodic(0.005);*/
 			wristDown();
+			wristSet = true;
 		}
 		
 		
-		if(operatorGamepad.getLeftTriggerPressed()){
+		if(operatorGamepad.getLeftTriggerPressed() && operatorGamepad.getButtonHeld(XboxController.START_BUTTON)){
 			_intakeMotor.set(Math.pow(operatorGamepad.getLeftTrigger(),2));
+        }else if(operatorGamepad.getLeftTriggerPressed()){
+        	if(armUp == false) {
+        		wristSlightDown();
+        		wristSet = true;
+        		_intakeMotor.set(0.8);
+        	}else {
+        		_intakeMotor.set(0.5);
+        	}
         }else if(operatorGamepad.getRightTriggerPressed()) {
         	_intakeMotor.set(-1*operatorGamepad.getRightTrigger());
-        	if(armUp == false && elevatorUp == false) {
-        		gripLight();
-        	}
-        }else if(operatorGamepad.getButtonHeld(XboxController.LEFT_BUMPER)){
-			//wristDown();
-		_intakeMotor.set(0.5);
         }else {
         	if(!gripSpin) {
-        		_intakeMotor.set(-0.3);
+        		//_intakeMotor.set(-0.3);
         	}
         }
 	   
+		if(operatorGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)){
+			if(elevatorUp == false && armUp == false) {
+				gripState = GripState.LIGHT;
+			}
+			wristDown();
+			wristSet = true;
+		}
 		
-		switch(operatorGamepad.getDirectionPad()){
+		if (operatorGamepad.getButtonHeld(XboxController.LEFT_BUMPER)) {
+			if(armUp == false) {
+				wristSlightUp();
+				wristSet = true;
+			}
+		}
+		
+		if(operatorGamepad.getButtonHeld(XboxController.BACK_BUTTON)){
+			gripState = GripState.OPEN;
+		}
+		
+		
+		if (Math.abs(_armMotor.getActiveTrajectoryVelocity()) < 100 && !wristSet && !manualWrist) {
+			if(armUp == false) {
+				wristUp();
+			}
+		}
+		
+		
+		/*switch(operatorGamepad.getDirectionPad()){
 		case UP:
 			gripOpen();
 			break;
@@ -408,20 +560,32 @@ public class Robot extends IterativeRobot {
 			gripNeutral();
 			break;
 		case NONE:
-		}
+		}*/
 
 
-		if(operatorGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)){
-				//armDown();
-				//elevatorDown();
-				gripFirm();
-				//elevatorFast();
-				wristUp();
+		switch(gripState) {
+		case FIRM:
+			gripFirm();
+			break;
+		case LIGHT:
+			gripLight();
+			break;
+		case OPEN:
+			gripOpen();
+			break;
 		}
 		
-		
-		
-		//_wristMotor.set(operatorGamepad.getLeftY());
+		if (elevatorOverrideNew != elevatorOverride) {
+			_elevatorMotor.configForwardSoftLimitEnable(!elevatorOverrideNew, 10);
+			_elevatorMotor.configReverseSoftLimitEnable(!elevatorOverrideNew, 10);
+			elevatorOverride = elevatorOverrideNew;
+		}
+		/*
+		if (wristOverrideNew != wristOverride) {
+			_wristMotor.configForwardSoftLimitEnable(!wristOverrideNew, 10);
+			_wristMotor.configReverseSoftLimitEnable(!wristOverrideNew, 10);
+			wristOverride = wristOverrideNew;
+		}*/
 		
     }
     
@@ -451,10 +615,9 @@ public class Robot extends IterativeRobot {
     public void gripFirm() {
     	gripSolenoidHigh.set(false);
 		gripSolenoidLow.set(false);
-		_intakeMotor.set(-0.3);
-    	if(armUp == false && wristUp == false && elevatorUp == false) {
+    	/*if(armUp == false && wristUp == false && elevatorUp == false) {
     		wristSlightUp();
-    	}
+    	}*/
 		gripSpin = false;
     }
     public void gripOpen() {
@@ -487,14 +650,20 @@ public class Robot extends IterativeRobot {
     	wristUp = false;
     	manualWrist = false;
     }
-    public void wristUp() {
+    public void wristSlightDown() {
     	_wristMotor.selectProfileSlot(0,0);
     	_wristMotor.set(ControlMode.MotionMagic, -475);
     	wristUp = true;
     	manualWrist = false;
     }
+    public void wristUp() {
+    	_wristMotor.selectProfileSlot(0,0);
+    	_wristMotor.set(ControlMode.MotionMagic, 0);
+    	wristUp = true;
+    	manualWrist = false;
+    }
     public void wristDown() {
-    	_wristMotor.selectProfileSlot(1,0);
+    	_wristMotor.selectProfileSlot(0,0);
     	_wristMotor.set(ControlMode.MotionMagic, -2700);
     	wristUp = false;
     	manualWrist = false;
