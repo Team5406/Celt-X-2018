@@ -2,6 +2,8 @@ package org.cafirst.frc.team5406.robot;
 
 import edu.wpi.first.wpilibj.PowerDistributionPanel;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
+import org.cafirst.frc.team5406.util.CX_WPI_TalonSRX;
 import org.cafirst.frc.team5406.util.Motors;
 
 import java.util.ArrayList;
@@ -25,9 +27,12 @@ public class DrivetrainCurrentMonitor {
   private int motorsPerSide;
   private double lastScalingFactor;
   private double driveGearRatio = 4;
+  CX_WPI_TalonSRX leftMotor;
+  CX_WPI_TalonSRX rightMotor;
   
-  public DrivetrainCurrentMonitor(Drive drive, Motors.Motor motorType, int motorsPerSide){
-    this.drive = drive;
+  public DrivetrainCurrentMonitor(CX_WPI_TalonSRX leftMotor, CX_WPI_TalonSRX rightMotor, Motors.Motor motorType, int motorsPerSide){
+    this.leftMotor = leftMotor;
+    this.rightMotor = rightMotor;
     this.motorType = motorType;
     this.motorsPerSide = motorsPerSide;
   
@@ -56,19 +61,19 @@ public class DrivetrainCurrentMonitor {
   }
   
   private double getLeftSpeed(){
-    return drive.getLeftEncVel() * getEncRatio();
+    return leftMotor.getActiveTrajectoryPosition() * getEncRatio();
   }
   
   private double getRightSpeed(){
-    return drive.getRightEncVel() * getEncRatio();
+    return rightMotor.getActiveTrajectoryPosition() * getEncRatio();
   }
   
   private double getLeftVoltage(){
-    return BATTERY_VOLTAGE * drive.getLeftSetpoint();
+    return BATTERY_VOLTAGE * leftMotor.getSetpoint();
   }
   
   private double getRightVoltage(){
-    return BATTERY_VOLTAGE * drive.getRightSetpoint();
+    return BATTERY_VOLTAGE * rightMotor.getSetpoint();
   }
   
   public double getScalingFactor(){
