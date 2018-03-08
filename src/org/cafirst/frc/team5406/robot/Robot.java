@@ -19,6 +19,8 @@ import com.ctre.phoenix.motorcontrol.ControlMode;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.PowerDistributionPanel;
+import edu.wpi.first.wpilibj.Servo;
+
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -55,8 +57,7 @@ public class Robot extends IterativeRobot {
 	PowerDistributionPanel pdp = new PowerDistributionPanel();
 	public static int PRACTICE_BOT = 0; //jumper to short pins on practice bot
 	public static DigitalInput practiceBot = new DigitalInput(PRACTICE_BOT);
-
-
+		
 	double speed = 0;
 	DifferentialDrive _drive = new DifferentialDrive(_frontLeftMotor, _frontRightMotor);
     Solenoid elevatorSolenoid;
@@ -126,6 +127,7 @@ public class Robot extends IterativeRobot {
     
     boolean manualElevator = false;
     boolean manualWrist = false;
+    boolean manualArm = false;
 	boolean elevatorOverride = false;
 	boolean wristOverride = false;
 	boolean wristZeroed = false;
@@ -188,6 +190,8 @@ public class Robot extends IterativeRobot {
 	    	_rightSlave2.follow(_frontRightMotor);
 	    	_rightSlave3.follow(_frontRightMotor);
 	    	
+	    	_frontLeftMotor.configOpenloopRamp(0.25, 10);
+	    	_frontRightMotor.configOpenloopRamp(0.25, 10);
 	    	_elevatorSlave1.follow(_elevatorMotor);
 	    	_intakeSlave1.follow(_intakeMotor);
 	    	_intakeSlave1.setInverted(true);
@@ -204,17 +208,17 @@ public class Robot extends IterativeRobot {
 			_frontRightMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
 			_frontLeftMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
 			_frontLeftMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
-			_frontLeftMotor.configContinuousCurrentLimit(25, 0);
+			_frontLeftMotor.configContinuousCurrentLimit(20, 0);
 			//_frontLeftMotor.configPeakCurrentLimit(30, 0);
 			//_frontLeftMotor.configPeakCurrentDuration(30, 0);
 			_frontLeftMotor.enableCurrentLimit(true);
-			_frontRightMotor.configContinuousCurrentLimit(25, 0);
+			_frontRightMotor.configContinuousCurrentLimit(20, 0);
 			//_frontRightMotor.configPeakCurrentLimit(30, 0);
 			//_frontRightMotor.configPeakCurrentDuration(30, 0);
 			_frontRightMotor.enableCurrentLimit(true);
 			_armMotor.configContinuousCurrentLimit(40, 0);
-			_armMotor.configPeakCurrentLimit(40, 0);
-			_armMotor.configPeakCurrentDuration(40, 0);
+			_armMotor.configPeakCurrentLimit(60, 0);
+			_armMotor.configPeakCurrentDuration(30, 0);
 			_armMotor.enableCurrentLimit(true);
 			_intakeMotor.configContinuousCurrentLimit(40, 0);
 			_intakeMotor.configPeakCurrentLimit(40, 0);
@@ -234,7 +238,7 @@ public class Robot extends IterativeRobot {
 	
 	    	_wristMotor.selectProfileSlot(0,0);
 	    	_wristMotor.config_kF(0, 1, kTimeoutMs);
-	    	_wristMotor.config_kP(0, 0.25, kTimeoutMs);
+	    	_wristMotor.config_kP(0, 0.3, kTimeoutMs);
 	    	_wristMotor.config_kI(0, 0, kTimeoutMs);
 	    	_wristMotor.config_kD(0, 0, kTimeoutMs);
 	    	_wristMotor.selectProfileSlot(1,0);
@@ -353,6 +357,7 @@ public class Robot extends IterativeRobot {
     public void teleopPeriodic() {
     	gripState = GripState.FIRM;
     	boolean wristSet = false;
+    	boolean armSet = false;
 		boolean elevatorOverrideNew = false;
 		boolean wristOverrideNew = false;
 
@@ -507,7 +512,9 @@ public class Robot extends IterativeRobot {
         	if(armUp == false) {
         		wristSlightDown();
         		wristSet = true;
-        		_intakeMotor.set(0.8);
+        		if(_wristMotor.getSelectedSensorPosition(0) < -350) {
+        			_intakeMotor.set(0.7);
+        		}
         	}else {
         		_intakeMotor.set(0.5);
         	}
@@ -515,7 +522,7 @@ public class Robot extends IterativeRobot {
         	_intakeMotor.set(-1*operatorGamepad.getRightTrigger());
         }else {
         	if(!gripSpin) {
-        		//_intakeMotor.set(-0.3);
+        		_intakeMotor.set(0);
         	}
         }
 	   
@@ -546,21 +553,28 @@ public class Robot extends IterativeRobot {
 		}
 		
 		
-		/*switch(operatorGamepad.getDirectionPad()){
+		switch(operatorGamepad.getDirectionPad()){
 		case UP:
-			gripOpen();
+			_armMotor.set(0.6);
+			manualArm = true;
 			break;
 		case DOWN:
-			gripFirm();
+			_armMotor.set(-0.4);
+			manualArm = true;
 			break;
 		case LEFT:
-			gripLight();
+			if(operatorGamepad.getButtonHeld(XboxController.START_BUTTON)) {
+				
+			}
 			break;
 		case RIGHT:
-			gripNeutral();
-			break;
 		case NONE:
-		}*/
+			if(manualArm) {
+				manualArm = false;
+				_armMotor.selectProfileSlot(0,0);
+				_armMotor.set(ControlMode.MotionMagic, _armMotor.getSelectedSensorPosition(0));
+			}
+		}
 
 
 		switch(gripState) {
@@ -580,12 +594,12 @@ public class Robot extends IterativeRobot {
 			_elevatorMotor.configReverseSoftLimitEnable(!elevatorOverrideNew, 10);
 			elevatorOverride = elevatorOverrideNew;
 		}
-		/*
+		
 		if (wristOverrideNew != wristOverride) {
 			_wristMotor.configForwardSoftLimitEnable(!wristOverrideNew, 10);
 			_wristMotor.configReverseSoftLimitEnable(!wristOverrideNew, 10);
 			wristOverride = wristOverrideNew;
-		}*/
+		}
 		
     }
     
@@ -646,12 +660,12 @@ public class Robot extends IterativeRobot {
     
     public void wristSlightUp() {
     	_wristMotor.selectProfileSlot(0,0);
-    	_wristMotor.set(ControlMode.MotionMagic, -2200);
+    	_wristMotor.set(ControlMode.MotionMagic, -2000);
     	wristUp = false;
     	manualWrist = false;
     }
     public void wristSlightDown() {
-    	_wristMotor.selectProfileSlot(0,0);
+    	_wristMotor.selectProfileSlot(1,0);
     	_wristMotor.set(ControlMode.MotionMagic, -475);
     	wristUp = true;
     	manualWrist = false;
