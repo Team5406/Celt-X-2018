@@ -21,9 +21,8 @@ import com.ctre.phoenix.motorcontrol.ControlMode;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.PowerDistributionPanel;
-import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.Servo;
-
+import edu.wpi.first.wpilibj.Compressor;
 
 
 /**
@@ -32,9 +31,22 @@ import edu.wpi.first.wpilibj.Servo;
  * documentation. If you change the name of this class or the package after
  * creating this project, you must also update the manifest file in the resource
  * directory.
+ * 
  */
 public class Robot extends IterativeRobot {
 
+	int ARM_UP = 6850;
+	int ARM_DOWN = 100;
+	double ARM_RANGE = 135; //degrees
+	double WRIST_RANGE = 135; //degrees
+	int ELEVATOR_UP = 215000;
+	int ELEVATOR_DOWN = 1000;
+	int WRIST_UP = 0;
+	int WRIST_DOWN = -2700;
+	int ARM_DOWN_THRESHOLD = 500;
+	int ELEVATOR_DOWN_THRESHOLD = 2500;
+	int RAMP_SERVO_START = 75;
+	int RAMP_SERVO_RELEASE = 180;
 	
 	WPI_TalonSRX _frontLeftMotor = new WPI_TalonSRX(1); //drive
 	WPI_VictorSPX _leftSlave1 = new WPI_VictorSPX(2); //left drive
@@ -52,7 +64,7 @@ public class Robot extends IterativeRobot {
 	//WPI_VictorSPX _intakeSlave1 = new WPI_VictorSPX(9);
 	WPI_TalonSRX _intakeSlave1 = new WPI_TalonSRX(9);
 
-	
+	Compressor compressor = new Compressor();
 	WPI_TalonSRX _elevatorMotor= new WPI_TalonSRX(12); //
 	WPI_VictorSPX _elevatorSlave1 = new WPI_VictorSPX(11);
 	WPI_TalonSRX _armMotor = new WPI_TalonSRX(13); //arm motor
@@ -65,7 +77,7 @@ public class Robot extends IterativeRobot {
 	double speed = 0;
 	DifferentialDrive _drive = new DifferentialDrive(_frontLeftMotor, _frontRightMotor);
 	public static AHRS navX = new AHRS(SPI.Port.kMXP);
-	private Servo rampCatch = new Servo(11); //DIO0 on MXP
+	private Servo rampCatch = new Servo(10); //DIO0 on MXP
 	
 
     Solenoid elevatorSolenoid;
@@ -155,8 +167,29 @@ public class Robot extends IterativeRobot {
 	     * wrist down
 	     * arm all the way up
 	     */
+	    	int armPos;
+	    	
 	    	switch (flipWrist) {
 	    	case 1:
+	    		_wristMotor.selectProfileSlot(0,0);
+	    		armPos = _armMotor.getSelectedSensorPosition(0);
+	    		_wristMotor.set(ControlMode.MotionMagic, wristFlipPos(armPos));
+	    		if(armPos < 200) {
+	    			flipWrist = 5;
+	    		}
+	    		break;
+	    	case 3:
+	    		_wristMotor.selectProfileSlot(0,0);
+	    		armPos = _armMotor.getSelectedSensorPosition(0);
+	    		_wristMotor.set(ControlMode.MotionMagic, wristFlipPos(armPos));
+	    		if(armPos > ARM_UP - 200) {
+	    			flipWrist = 5;
+	    		}
+	    		break;
+	    		
+	    	}
+	    	/*case 1:
+	    		
 		    	if(_armMotor.getSelectedSensorPosition(0) > 5500) {
 		    		
 		    		wristDown();
@@ -186,7 +219,7 @@ public class Robot extends IterativeRobot {
 		    	break;
 	    	
 		    	
-	    	}
+	    	}*/
 	    }
 	}
 	Notifier _notifier = new Notifier(new PeriodicRunnable());
@@ -252,13 +285,13 @@ public class Robot extends IterativeRobot {
 	    	_wristMotor.config_kI(0, 0, kTimeoutMs);
 	    	_wristMotor.config_kD(0, 0, kTimeoutMs);
 	    	_wristMotor.selectProfileSlot(1,0);
-	    	_wristMotor.config_kF(1, .2, kTimeoutMs);
+	    	_wristMotor.config_kF(1, 1, kTimeoutMs);
 	    	_wristMotor.config_kP(1, 1, kTimeoutMs);
 	    	_wristMotor.config_kI(1, 0.001, kTimeoutMs);
-	    	_wristMotor.config_kD(1, 1.5, kTimeoutMs);
+	    	_wristMotor.config_kD(1, 0, kTimeoutMs);
 			/* set acceleration and vcruise velocity - see documentation */
 	    	_wristMotor.configMotionCruiseVelocity(4000, kTimeoutMs);
-	    	_wristMotor.configMotionAcceleration(2000, kTimeoutMs);
+	    	_wristMotor.configMotionAcceleration(8000, kTimeoutMs);
 			/* zero the sensor */
 	    	_wristMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
 	    	_wristMotor.set(ControlMode.PercentOutput, 0);
@@ -270,13 +303,13 @@ public class Robot extends IterativeRobot {
 	    	_armMotor.config_kI(0, 0, kTimeoutMs);
 	    	_armMotor.config_kD(0, 0, kTimeoutMs);
 	    	_armMotor.selectProfileSlot(1,0);
-	    	_armMotor.config_kF(1, 0.2, kTimeoutMs);
+	    	_armMotor.config_kF(1, 0.1, kTimeoutMs);
 	    	_armMotor.config_kP(1, 0.15, kTimeoutMs);
 	    	_armMotor.config_kI(1, 0, kTimeoutMs);
 	    	_armMotor.config_kD(1, 0, kTimeoutMs);
 			/* set acceleration and vcruise velocity - see documentation */
 	    	_armMotor.configMotionCruiseVelocity(2000, kTimeoutMs);
-	    	_armMotor.configMotionAcceleration(2000, kTimeoutMs);
+	    	_armMotor.configMotionAcceleration(4000, kTimeoutMs);
 			/* zero the sensor */
 	    	_armMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
 	    	_armMotor.set(ControlMode.PercentOutput, 0);
@@ -345,12 +378,15 @@ public class Robot extends IterativeRobot {
     	else {
     		System.out.println("Identity crisis. I am not a practice bot.");
     	}
+		rampCatch.setAngle(RAMP_SERVO_START);
+
     	
     	setupMotors();
     
     }
     public void disabledInit() {
     	disabled = true;
+		rampCatch.setAngle(RAMP_SERVO_START);
     	_elevatorMotor.set(ControlMode.PercentOutput, 0);
     	_wristMotor.set(ControlMode.PercentOutput, 0);
     	_armMotor.set(ControlMode.PercentOutput, 0);
@@ -368,11 +404,17 @@ public class Robot extends IterativeRobot {
     
     public void teleopPeriodic() {
     	gripState = GripState.FIRM;
-    	boolean armSet = false;
+    	//boolean armSet = false;
 		boolean elevatorOverrideNew = false;
 		boolean wristOverrideNew = false;
 		boolean armOverrideNew = false;
 		boolean wristSet = false;
+		
+		long elevatorPos = _elevatorMotor.getSelectedSensorPosition(0);
+		long armPos = _armMotor.getSelectedSensorPosition(0);
+		//long wristPos = _wristMotor.getSelectedSensorPosition(0);
+		
+		
 		
 		if(!wristZeroed) {
 			wristOverrideNew = true;
@@ -433,8 +475,8 @@ public class Robot extends IterativeRobot {
         	precisionDriveY = 1;
         }
 		
-		if(driverGamepad.getButtonHeld(XboxController.BACK_BUTTON) && driverGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)) {
-			rampCatch.setAngle(90);
+		if(driverGamepad.getButtonHeld(XboxController.START_BUTTON) && driverGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)) {
+			rampCatch.setAngle(RAMP_SERVO_RELEASE);
 		}
 		
         _drive.arcadeDrive(precisionDriveY*driverGamepad.getLeftY(), precisionDriveX*driverGamepad.getLeftX());
@@ -442,6 +484,7 @@ public class Robot extends IterativeRobot {
         displayCurrent();
 		
 		if(driverGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)){
+			compressor.stop();
 			if(Math.abs(driverGamepad.getRightY())>0.2 ) {
 				elevatorSlow();
 				_elevatorMotor.set(driverGamepad.getRightY());
@@ -463,6 +506,8 @@ public class Robot extends IterativeRobot {
 			manualElevator = false;
 	    	_elevatorMotor.selectProfileSlot(0,0);
 	    	_elevatorMotor.set(ControlMode.MotionMagic, _elevatorMotor.getSelectedSensorPosition(0));
+		} else {
+			compressor.start();
 		}
 
 
@@ -498,6 +543,13 @@ public class Robot extends IterativeRobot {
 			elevatorDown();
 			armUp();
 			wristSet = true;
+			/*if(wristPos < -2000) {
+	    	_armMotor.configMotionCruiseVelocity(1000, kTimeoutMs);
+	    	_armMotor.configMotionAcceleration(1000, kTimeoutMs);
+			}else {
+		    	_armMotor.configMotionCruiseVelocity(2000, kTimeoutMs);
+		    	_armMotor.configMotionAcceleration(2000, kTimeoutMs);
+			}*/
 			flipWrist =3;
 			_notifier.startPeriodic(0.005);
 			needsWristUp = false;
@@ -507,8 +559,11 @@ public class Robot extends IterativeRobot {
 			armDown();
 			elevatorFast();
 			elevatorUp();
-			wristDown();
+			//wristDown();
+			flipWrist =1;
+			_notifier.startPeriodic(0.005);
 			wristSet = true;
+			//manualWrist = true;
 			needsWristUp = false;
 		}
 		
@@ -541,7 +596,7 @@ public class Robot extends IterativeRobot {
 		if(operatorGamepad.getLeftTriggerPressed() && operatorGamepad.getButtonHeld(XboxController.START_BUTTON)){
 			_intakeMotor.set(Math.pow(operatorGamepad.getLeftTrigger(),2));
         }else if(operatorGamepad.getLeftTriggerPressed()){
-        	if(armUp == false) {
+        	if(armPos < ARM_DOWN_THRESHOLD) {
         		wristSlightDown();
         		wristSet = true;
         		needsWristUp = true;
@@ -560,7 +615,7 @@ public class Robot extends IterativeRobot {
         }
 	   
 		if(operatorGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)){
-			if(elevatorUp == false && armUp == false) {
+			if(elevatorPos < ELEVATOR_DOWN_THRESHOLD && armPos < ARM_DOWN_THRESHOLD) {
 				gripState = GripState.LIGHT;
 			}
 			wristDown();
@@ -569,7 +624,7 @@ public class Robot extends IterativeRobot {
 		}
 		
 		if (operatorGamepad.getButtonHeld(XboxController.LEFT_BUMPER)) {
-			if(_armMotor.getSelectedSensorPosition(0) < 500) {
+			if(armPos < ARM_DOWN_THRESHOLD) {
 				wristSlightUp();
 				wristSet = true;
 				needsWristUp = true;
@@ -581,7 +636,8 @@ public class Robot extends IterativeRobot {
 		}
 		
 		if(!wristSet && needsWristUp) {
-			if(_armMotor.getSelectedSensorPosition(0) < 500) {
+			flipWrist = 5;
+			if(armPos < ARM_DOWN_THRESHOLD) {
 				needsWristUp = false;
 				wristUp();
 			}
@@ -592,15 +648,19 @@ public class Robot extends IterativeRobot {
 		case UP:
 			_armMotor.set(0.6);
 			manualArm = true;
+			if(operatorGamepad.getButtonHeld(XboxController.START_BUTTON)) {
+				armOverrideNew = true;
+			}
 			break;
 		case DOWN:
 			_armMotor.set(-0.4);
 			manualArm = true;
+			if(operatorGamepad.getButtonHeld(XboxController.START_BUTTON)) {
+				armOverrideNew = true;
+			}
 			break;
 		case LEFT:
-			if(operatorGamepad.getButtonHeld(XboxController.START_BUTTON)) {
-				
-			}
+			
 			break;
 		case RIGHT:
 		case NONE:
@@ -699,9 +759,14 @@ public class Robot extends IterativeRobot {
     	armUp = false;
     }
     
+    public double wristFlipPos(int armPos) {
+    	return 1E-05*armPos*armPos - 0.4935*armPos - 5E-11;
+
+    }
+    
     public void wristSlightUp() {
     	_wristMotor.selectProfileSlot(0,0);
-    	_wristMotor.set(ControlMode.MotionMagic, -2000);
+    	_wristMotor.set(ControlMode.MotionMagic, -2100);
     	wristUp = false;
     	manualWrist = false;
     }
@@ -718,7 +783,7 @@ public class Robot extends IterativeRobot {
     	manualWrist = false;
     }
     public void wristDown() {
-    	_wristMotor.selectProfileSlot(0,0);
+    	_wristMotor.selectProfileSlot(1,0);
     	_wristMotor.set(ControlMode.MotionMagic, -2700);
     	wristUp = false;
     	manualWrist = false;
