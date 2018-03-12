@@ -233,8 +233,8 @@ public class Robot extends IterativeRobot {
 	    	_rightSlave2.follow(_frontRightMotor);
 	    	_rightSlave3.follow(_frontRightMotor);
 	    	
-	    	_frontLeftMotor.configOpenloopRamp(0.25, 10);
-	    	_frontRightMotor.configOpenloopRamp(0.25, 10);
+	    	_frontLeftMotor.configOpenloopRamp(0.25, kTimeoutMs);
+	    	_frontRightMotor.configOpenloopRamp(0.25, kTimeoutMs);
 	    	_elevatorSlave1.follow(_elevatorMotor);
 	    	_intakeSlave1.follow(_intakeMotor);
 	    	_intakeSlave1.setInverted(true);
@@ -247,37 +247,37 @@ public class Robot extends IterativeRobot {
 	    	_leftSlave2.setInverted(true);
 	    	_rightSlave1.setInverted(true);
 	    	_rightSlave2.setInverted(true);*/
-	    	_frontRightMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
-			_frontRightMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
-			_frontLeftMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
-			_frontLeftMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
-			_frontLeftMotor.configContinuousCurrentLimit(20, 0);
+	    	_frontRightMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, kTimeoutMs);
+			_frontRightMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, kTimeoutMs);
+			_frontLeftMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, kTimeoutMs);
+			_frontLeftMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, kTimeoutMs);
+			_frontLeftMotor.configContinuousCurrentLimit(20, kTimeoutMs);
 			//_frontLeftMotor.configPeakCurrentLimit(30, 0);
 			//_frontLeftMotor.configPeakCurrentDuration(30, 0);
 			_frontLeftMotor.enableCurrentLimit(true);
-			_frontRightMotor.configContinuousCurrentLimit(20, 0);
+			_frontRightMotor.configContinuousCurrentLimit(20, kTimeoutMs);
 			//_frontRightMotor.configPeakCurrentLimit(30, 0);
 			//_frontRightMotor.configPeakCurrentDuration(30, 0);
 			_frontRightMotor.enableCurrentLimit(true);
-			_armMotor.configContinuousCurrentLimit(40, 0);
-			_armMotor.configPeakCurrentLimit(60, 0);
-			_armMotor.configPeakCurrentDuration(30, 0);
+			_armMotor.configContinuousCurrentLimit(40, kTimeoutMs);
+			_armMotor.configPeakCurrentLimit(60, kTimeoutMs);
+			_armMotor.configPeakCurrentDuration(30, kTimeoutMs);
 			_armMotor.enableCurrentLimit(true);
-			_intakeMotor.configContinuousCurrentLimit(40, 0);
-			_intakeMotor.configPeakCurrentLimit(40, 0);
-			_intakeMotor.configPeakCurrentDuration(40, 0);
+			_intakeMotor.configContinuousCurrentLimit(40, kTimeoutMs);
+			_intakeMotor.configPeakCurrentLimit(40, kTimeoutMs);
+			_intakeMotor.configPeakCurrentDuration(40, kTimeoutMs);
 			_intakeMotor.enableCurrentLimit(true);
-			_wristMotor.configContinuousCurrentLimit(30, 0);
-			_wristMotor.configPeakCurrentLimit(30, 0);
-			_wristMotor.configPeakCurrentDuration(30, 0);
+			_wristMotor.configContinuousCurrentLimit(30, kTimeoutMs);
+			_wristMotor.configPeakCurrentLimit(30, kTimeoutMs);
+			_wristMotor.configPeakCurrentDuration(30, kTimeoutMs);
 			_wristMotor.enableCurrentLimit(true);
 	
-	    	_elevatorMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
-			_elevatorMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
-			_armMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
-			_armMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
-			_wristMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, 50);
-			_wristMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 50);
+	    	_elevatorMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, kTimeoutMs);
+			_elevatorMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, kTimeoutMs);
+			_armMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, kTimeoutMs);
+			_armMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, kTimeoutMs);
+			_wristMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, kTimeoutMs);
+			_wristMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, kTimeoutMs);
 	
 	    	_wristMotor.selectProfileSlot(0,0);
 	    	_wristMotor.config_kF(0, 1, kTimeoutMs);
@@ -337,18 +337,18 @@ public class Robot extends IterativeRobot {
 	    	
 	    	
 	    	
-	    	_elevatorMotor.configForwardSoftLimitThreshold(216000, 10);
-	    	_elevatorMotor.configReverseSoftLimitThreshold(0, 10);
-	    	_wristMotor.configForwardSoftLimitThreshold(0, 10);
-	    	_wristMotor.configReverseSoftLimitThreshold(-2700, 10);
-	    	_armMotor.configForwardSoftLimitThreshold(6900, 10);
-	    	_armMotor.configReverseSoftLimitThreshold(0, 10);
-	    	_armMotor.configForwardSoftLimitEnable(true, 10);
-	    	_armMotor.configReverseSoftLimitEnable(true, 10);
-	    	_wristMotor.configForwardSoftLimitEnable(true, 10);
-	    	_wristMotor.configReverseSoftLimitEnable(true, 10);
-	    	_elevatorMotor.configForwardSoftLimitEnable(true, 10);
-	    	_elevatorMotor.configReverseSoftLimitEnable(true, 10);
+	    	_elevatorMotor.configForwardSoftLimitThreshold(216000, kTimeoutMs);
+	    	_elevatorMotor.configReverseSoftLimitThreshold(0, kTimeoutMs);
+	    	_wristMotor.configForwardSoftLimitThreshold(0, kTimeoutMs);
+	    	_wristMotor.configReverseSoftLimitThreshold(-2700, kTimeoutMs);
+	    	_armMotor.configForwardSoftLimitThreshold(6900, kTimeoutMs);
+	    	_armMotor.configReverseSoftLimitThreshold(0, kTimeoutMs);
+	    	_armMotor.configForwardSoftLimitEnable(true, kTimeoutMs);
+	    	_armMotor.configReverseSoftLimitEnable(true, kTimeoutMs);
+	    	_wristMotor.configForwardSoftLimitEnable(true, kTimeoutMs);
+	    	_wristMotor.configReverseSoftLimitEnable(true, kTimeoutMs);
+	    	_elevatorMotor.configForwardSoftLimitEnable(true, kTimeoutMs);
+	    	_elevatorMotor.configReverseSoftLimitEnable(true, kTimeoutMs);
     	
 
 		}
@@ -481,7 +481,7 @@ public class Robot extends IterativeRobot {
 		
         _drive.arcadeDrive(precisionDriveY*driverGamepad.getLeftY(), precisionDriveX*driverGamepad.getLeftX());
 
-        displayCurrent();
+        //displayCurrent();
 		
 		if(driverGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)){
 			compressor.stop();
@@ -543,13 +543,6 @@ public class Robot extends IterativeRobot {
 			elevatorDown();
 			armUp();
 			wristSet = true;
-			/*if(wristPos < -2000) {
-	    	_armMotor.configMotionCruiseVelocity(1000, kTimeoutMs);
-	    	_armMotor.configMotionAcceleration(1000, kTimeoutMs);
-			}else {
-		    	_armMotor.configMotionCruiseVelocity(2000, kTimeoutMs);
-		    	_armMotor.configMotionAcceleration(2000, kTimeoutMs);
-			}*/
 			flipWrist =3;
 			_notifier.startPeriodic(0.005);
 			needsWristUp = false;
@@ -685,20 +678,20 @@ public class Robot extends IterativeRobot {
 		}
 		
 		if (armOverrideNew != armOverride) {
-			_armMotor.configForwardSoftLimitEnable(!armOverrideNew, 10);
-			_armMotor.configReverseSoftLimitEnable(!armOverrideNew, 10);
+			_armMotor.configForwardSoftLimitEnable(!armOverrideNew, kTimeoutMs);
+			_armMotor.configReverseSoftLimitEnable(!armOverrideNew, kTimeoutMs);
 			armOverride = armOverrideNew;
 		}
 		
 		if (elevatorOverrideNew != elevatorOverride) {
-			_elevatorMotor.configForwardSoftLimitEnable(!elevatorOverrideNew, 10);
-			_elevatorMotor.configReverseSoftLimitEnable(!elevatorOverrideNew, 10);
+			_elevatorMotor.configForwardSoftLimitEnable(!elevatorOverrideNew, kTimeoutMs);
+			_elevatorMotor.configReverseSoftLimitEnable(!elevatorOverrideNew, kTimeoutMs);
 			elevatorOverride = elevatorOverrideNew;
 		}
 		
 		if (wristOverrideNew != wristOverride) {
-			_wristMotor.configForwardSoftLimitEnable(!wristOverrideNew, 10);
-			_wristMotor.configReverseSoftLimitEnable(!wristOverrideNew, 10);
+			_wristMotor.configForwardSoftLimitEnable(!wristOverrideNew, kTimeoutMs);
+			_wristMotor.configReverseSoftLimitEnable(!wristOverrideNew, kTimeoutMs);
 			wristOverride = wristOverrideNew;
 		}
 		
@@ -708,8 +701,8 @@ public class Robot extends IterativeRobot {
     	setupMotors();
     	autoLoop=0;
     	//shiftSolenoid.set(true);
-    	_frontLeftMotor.setSelectedSensorPosition(0, 0, 10);
-    	_frontRightMotor.setSelectedSensorPosition(0, 0, 10);
+    	_frontLeftMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+    	_frontRightMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
     	speed =0;
     	step =0;
     }
@@ -750,12 +743,12 @@ public class Robot extends IterativeRobot {
      	
     public void armUp() {
     	_armMotor.selectProfileSlot(0,0);
-    	_armMotor.set(ControlMode.MotionMagic, 6850);
+    	_armMotor.set(ControlMode.MotionMagic, ARM_UP);
     	armUp = true;
     }
     public void armDown() {
     	_armMotor.selectProfileSlot(1,0);
-    	_armMotor.set(ControlMode.MotionMagic, 100);
+    	_armMotor.set(ControlMode.MotionMagic, ARM_DOWN);
     	armUp = false;
     }
     
@@ -778,20 +771,20 @@ public class Robot extends IterativeRobot {
     }
     public void wristUp() {
     	_wristMotor.selectProfileSlot(0,0);
-    	_wristMotor.set(ControlMode.MotionMagic, 0);
+    	_wristMotor.set(ControlMode.MotionMagic, WRIST_UP);
     	wristUp = true;
     	manualWrist = false;
     }
     public void wristDown() {
     	_wristMotor.selectProfileSlot(1,0);
-    	_wristMotor.set(ControlMode.MotionMagic, -2700);
+    	_wristMotor.set(ControlMode.MotionMagic, WRIST_DOWN);
     	wristUp = false;
     	manualWrist = false;
     }
 
     public void elevatorUp() {
     	_elevatorMotor.selectProfileSlot(0,0);
-    	_elevatorMotor.set(ControlMode.MotionMagic, 215000);
+    	_elevatorMotor.set(ControlMode.MotionMagic, ELEVATOR_UP);
     	elevatorUp = true;
     }
     public void elevatorSwitchMid() {
@@ -802,7 +795,7 @@ public class Robot extends IterativeRobot {
 
     public void elevatorDown() {
     	_elevatorMotor.selectProfileSlot(1,0);
-    	_elevatorMotor.set(ControlMode.MotionMagic, 1000);
+    	_elevatorMotor.set(ControlMode.MotionMagic, ELEVATOR_DOWN);
     	elevatorUp = false;
     	
     }
