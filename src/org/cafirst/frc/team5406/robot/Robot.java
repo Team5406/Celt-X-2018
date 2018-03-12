@@ -10,16 +10,12 @@ import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.StatusFrameEnhanced;
 import com.ctre.phoenix.motorcontrol.can.*;
 import com.kauailabs.navx.frc.AHRS;
-
 import edu.wpi.first.wpilibj.SPI;
 
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.Solenoid;
-
-import org.cafirst.frc.team5406.util.BrownoutMonitor;
-import org.cafirst.frc.team5406.util.Motors;
 import org.cafirst.frc.team5406.util.XboxController;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import edu.wpi.first.wpilibj.Notifier;
@@ -38,8 +34,6 @@ import edu.wpi.first.wpilibj.Compressor;
  * 
  */
 public class Robot extends IterativeRobot {
-	
-	private final boolean ENABLE_BROWNOUT_PROTECTION = true;
 
 	int ARM_UP = 6850;
 	int ARM_DOWN = 100;
@@ -70,13 +64,13 @@ public class Robot extends IterativeRobot {
 	//WPI_VictorSPX _intakeSlave1 = new WPI_VictorSPX(9);
 	WPI_TalonSRX _intakeSlave1 = new WPI_TalonSRX(9);
 
+	Compressor compressor = new Compressor();
 	WPI_TalonSRX _elevatorMotor= new WPI_TalonSRX(12); //
 	WPI_VictorSPX _elevatorSlave1 = new WPI_VictorSPX(11);
 	WPI_TalonSRX _armMotor = new WPI_TalonSRX(13); //arm motor
 	WPI_TalonSRX _wristMotor= new WPI_TalonSRX(14);
 	
-	public static PowerDistributionPanel pdp;
-	public static Compressor compressor;
+	PowerDistributionPanel pdp = new PowerDistributionPanel();
 	public static int PRACTICE_BOT = 0; //jumper to short pins on practice bot
 	public static DigitalInput practiceBot = new DigitalInput(PRACTICE_BOT);
 		
@@ -365,9 +359,6 @@ public class Robot extends IterativeRobot {
      * used for any initialization code.
      */
     public void robotInit() {
-    	pdp = new PowerDistributionPanel();
-    	compressor = new Compressor();
-    	
     	gripSolenoidHigh = new Solenoid(3);
     	elevatorSolenoid = new Solenoid(1);
     	wristSolenoid = new Solenoid(2);
@@ -488,8 +479,7 @@ public class Robot extends IterativeRobot {
 			rampCatch.setAngle(RAMP_SERVO_RELEASE);
 		}
 		
-		doArcadeDrive(precisionDriveY*driverGamepad.getLeftY(), precisionDriveX*driverGamepad.getLeftX());
-//        _drive.arcadeDrive(precisionDriveY*driverGamepad.getLeftY(), precisionDriveX*driverGamepad.getLeftX());
+        _drive.arcadeDrive(precisionDriveY*driverGamepad.getLeftY(), precisionDriveX*driverGamepad.getLeftX());
 
         displayCurrent();
 		
@@ -724,36 +714,6 @@ public class Robot extends IterativeRobot {
     	step =0;
     }
     
-    public double encVelToRad(double vel){ // Converts encoder reading to motor shaft rad/s
-        return vel * 10 / 4096 * 2 * Math.PI * (66 / 16);
-  }
-
-    public BrownoutMonitor brownoutMonitor = new BrownoutMonitor(Motors._775Pro, 4, 9);
-    double currentScaleFactor = 1;
-    public void doArcadeDrive(double throttle, double turn) {
-    	double leftPower = throttle + turn;
-    	double rightPower = -throttle + turn;
-    	
-    	if(ENABLE_BROWNOUT_PROTECTION && (Math.abs(_frontLeftMotor.getSelectedSensorVelocity(0)) > 0 || Math.abs(_frontRightMotor.getSelectedSensorVelocity(0)) > 0)) {
-    	      double leftVoltage = leftPower * 12 * 1 * currentScaleFactor;
-    	      double rightVoltage = rightPower * 12 * -1 * currentScaleFactor;
-    	      double leftSpeed = encVelToRad(_frontLeftMotor.getSelectedSensorVelocity(0));
-    	      double rightSpeed = -encVelToRad(_frontRightMotor.getSelectedSensorVelocity(0));
-    	      
-    	      currentScaleFactor = brownoutMonitor.getScalingFactor(leftVoltage, leftSpeed, rightVoltage, rightSpeed);
-    	      
-    	      //Comment these out to disable current limiting.
-    	      leftPower *= currentScaleFactor;
-    	      rightPower *= currentScaleFactor;
-    	}
-    	
-    	setLeftRight(leftPower, rightPower);
-    }
-    
-    public void setLeftRight(double left, double right) {
-    	_frontLeftMotor.set(ControlMode.PercentOutput, left);
-    	_frontRightMotor.set(ControlMode.PercentOutput, right);
-    }
     
     public void elevatorFast() {
     	elevatorSolenoid.set(false);
