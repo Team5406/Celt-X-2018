@@ -4,12 +4,26 @@ import org.cafirst.frc.team5406.robot.Robot;
 
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 
-public class TestAuto extends AutonomousRoutine{
-
-	public TestAuto(Robot _robot, WPI_TalonSRX _frontLeft, WPI_TalonSRX _frontRight, WPI_TalonSRX _intake) {
-		super(_robot, _frontLeft, _frontRight, _intake);
-		// TODO Auto-generated constructor stub
-		name = "Test Auto";
+public class DriveForward extends AutonomousRoutine{
+	
+	protected int autoLoop;
+	protected int step;
+	protected double speed;
+	protected Robot robot;
+	
+	protected WPI_TalonSRX _frontLeftMotor;
+	protected WPI_TalonSRX _frontRightMotor;
+	
+	protected WPI_TalonSRX _intakeMotor;
+	
+	public DriveForward(Robot _robot, WPI_TalonSRX _frontLeft, WPI_TalonSRX _frontRight, WPI_TalonSRX _intake) {
+		robot = _robot;
+		_frontLeftMotor = _frontLeft;
+		_frontRightMotor = _frontRight;
+		
+		_intakeMotor = _intake;
+		
+		name = "Drive Forward";
 	}
 
 	@Override

@@ -18,7 +18,7 @@ import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.Solenoid;
 
 import org.cafirst.frc.team5406.auto.AutonomousRoutine;
-import org.cafirst.frc.team5406.auto.TestAuto;
+import org.cafirst.frc.team5406.auto.DriveForward;
 import org.cafirst.frc.team5406.util.XboxController;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import edu.wpi.first.wpilibj.Notifier;
@@ -390,8 +390,8 @@ public class Robot extends IterativeRobot {
     	
     	setupMotors();
     	
-    	selectedRoutine = new TestAuto(this, _frontLeftMotor, _frontRightMotor, _intakeMotor);
-    	autonomousSelector.addDefault("0 - Test Auto", new TestAuto(this, _frontLeftMotor, _frontRightMotor, _intakeMotor));
+    	selectedRoutine = new DriveForward(this, _frontLeftMotor, _frontRightMotor, _intakeMotor);
+    	autonomousSelector.addDefault("0 - DriveForward", new DriveForward(this, _frontLeftMotor, _frontRightMotor, _intakeMotor));
     
     }
     public void disabledInit() {
