@@ -16,9 +16,13 @@ import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.Solenoid;
+
+import org.cafirst.frc.team5406.auto.AutonomousRoutine;
+import org.cafirst.frc.team5406.auto.TestAuto;
 import org.cafirst.frc.team5406.util.XboxController;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import edu.wpi.first.wpilibj.Notifier;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.PowerDistributionPanel;
 import edu.wpi.first.wpilibj.Servo;
@@ -75,7 +79,7 @@ public class Robot extends IterativeRobot {
 	public static DigitalInput practiceBot = new DigitalInput(PRACTICE_BOT);
 		
 	double speed = 0;
-	DifferentialDrive _drive = new DifferentialDrive(_frontLeftMotor, _frontRightMotor);
+	public DifferentialDrive _drive = new DifferentialDrive(_frontLeftMotor, _frontRightMotor);
 	public static AHRS navX = new AHRS(SPI.Port.kMXP);
 	private Servo rampCatch = new Servo(10); //DIO0 on MXP
 	
@@ -354,6 +358,9 @@ public class Robot extends IterativeRobot {
 		}
 	}
 	
+	AutonomousRoutine selectedRoutine;
+	SendableChooser<AutonomousRoutine> autonomousSelector = new SendableChooser<>();
+	
     /**
      * This function is run when the robot is first started up and should be
      * used for any initialization code.
@@ -382,6 +389,9 @@ public class Robot extends IterativeRobot {
 
     	
     	setupMotors();
+    	
+    	selectedRoutine = new TestAuto(this, _frontLeftMotor, _frontRightMotor, _intakeMotor);
+    	autonomousSelector.addDefault("0 - Test Auto", new TestAuto(this, _frontLeftMotor, _frontRightMotor, _intakeMotor));
     
     }
     public void disabledInit() {
@@ -390,6 +400,12 @@ public class Robot extends IterativeRobot {
     	_elevatorMotor.set(ControlMode.PercentOutput, 0);
     	_wristMotor.set(ControlMode.PercentOutput, 0);
     	_armMotor.set(ControlMode.PercentOutput, 0);
+    }
+    
+    @Override
+    public void disabledPeriodic()
+    {
+    	selectedRoutine = (AutonomousRoutine) autonomousSelector.getSelected().clone();
     }
     
     public void teleopInit() {
@@ -698,13 +714,15 @@ public class Robot extends IterativeRobot {
     }
     
     public void autonomousInit() {
-    	setupMotors();
+    	/*setupMotors();
     	autoLoop=0;
     	//shiftSolenoid.set(true);
     	_frontLeftMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
     	_frontRightMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
     	speed =0;
-    	step =0;
+    	step =0;*/
+    	
+    	selectedRoutine.init();
     }
     
     
@@ -811,7 +829,8 @@ public class Robot extends IterativeRobot {
         	SmartDashboard.putNumber("Right Drive 4", pdp.getCurrent(pdpSlots[7]));
     }
    public void autonomousPeriodic() {
-    	
+	   selectedRoutine.periodic();
+    	/*
     	double positionLeft = _frontLeftMotor.getSelectedSensorPosition(0);
     	double positionRight = _frontRightMotor.getSelectedSensorPosition(0);
     	
@@ -851,7 +870,7 @@ public class Robot extends IterativeRobot {
     		_intakeMotor.set(0.8);
     	}
     	System.out.println(positionRight);
-    	_drive.tankDrive(speed,speed);
+    	_drive.tankDrive(speed,speed);*/
     	/*switch(stepA) {
     	case 0:
 	    	switch(step) {
