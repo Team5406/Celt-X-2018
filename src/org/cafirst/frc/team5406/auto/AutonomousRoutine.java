@@ -8,6 +8,8 @@ public abstract class AutonomousRoutine implements Cloneable{
 	
 	protected final int kTimeoutMs = 10;
 	
+	String name = "";
+	
 	protected int autoLoop;
 	protected int step;
 	protected double speed;
@@ -35,5 +37,10 @@ public abstract class AutonomousRoutine implements Cloneable{
 	{
 		return super.clone();
 		
+	}
+	
+	public String getName()
+	{
+		return name;
 	}
 }

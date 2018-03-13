@@ -406,6 +406,7 @@ public class Robot extends IterativeRobot {
     public void disabledPeriodic()
     {
     	selectedRoutine = (AutonomousRoutine) autonomousSelector.getSelected().clone();
+    	SmartDashboard.putString("Auto", selectedRoutine.getName());
     }
     
     public void teleopInit() {

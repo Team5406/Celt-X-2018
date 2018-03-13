@@ -9,6 +9,7 @@ public class TestAuto extends AutonomousRoutine{
 	public TestAuto(Robot _robot, WPI_TalonSRX _frontLeft, WPI_TalonSRX _frontRight, WPI_TalonSRX _intake) {
 		super(_robot, _frontLeft, _frontRight, _intake);
 		// TODO Auto-generated constructor stub
+		name = "Test Auto";
 	}
 
 	@Override
