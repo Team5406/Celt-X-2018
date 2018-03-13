@@ -21,7 +21,6 @@ import com.ctre.phoenix.motorcontrol.ControlMode;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.PowerDistributionPanel;
-import edu.wpi.first.wpilibj.Servo;
 import edu.wpi.first.wpilibj.Compressor;
 
 
@@ -77,13 +76,12 @@ public class Robot extends IterativeRobot {
 	double speed = 0;
 	DifferentialDrive _drive = new DifferentialDrive(_frontLeftMotor, _frontRightMotor);
 	public static AHRS navX = new AHRS(SPI.Port.kMXP);
-	private Servo rampCatch = new Servo(10); //DIO0 on MXP
 	
 
     Solenoid elevatorSolenoid;
     Solenoid gripSolenoidLow;
     Solenoid gripSolenoidHigh;
-    Solenoid wristSolenoid;
+    Solenoid rampSolenoid;
     int flipWrist = 0;
     int gripCounter = 0;
 	int autoLoop = 0;
@@ -361,7 +359,7 @@ public class Robot extends IterativeRobot {
     public void robotInit() {
     	gripSolenoidHigh = new Solenoid(3);
     	elevatorSolenoid = new Solenoid(1);
-    	wristSolenoid = new Solenoid(2);
+    	rampSolenoid = new Solenoid(2);
     	gripSolenoidLow = new Solenoid(0);
 
     	driverGamepad = new XboxController(1);
@@ -378,7 +376,6 @@ public class Robot extends IterativeRobot {
     	else {
     		System.out.println("Identity crisis. I am not a practice bot.");
     	}
-		rampCatch.setAngle(RAMP_SERVO_START);
 
     	
     	setupMotors();
@@ -386,7 +383,7 @@ public class Robot extends IterativeRobot {
     }
     public void disabledInit() {
     	disabled = true;
-		rampCatch.setAngle(RAMP_SERVO_START);
+    	rampHold();
     	_elevatorMotor.set(ControlMode.PercentOutput, 0);
     	_wristMotor.set(ControlMode.PercentOutput, 0);
     	_armMotor.set(ControlMode.PercentOutput, 0);
@@ -476,7 +473,7 @@ public class Robot extends IterativeRobot {
         }
 		
 		if(driverGamepad.getButtonHeld(XboxController.START_BUTTON) && driverGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)) {
-			rampCatch.setAngle(RAMP_SERVO_RELEASE);
+			rampRelease();
 		}
 		
         _drive.arcadeDrive(precisionDriveY*driverGamepad.getLeftY(), precisionDriveX*driverGamepad.getLeftX());
@@ -707,6 +704,13 @@ public class Robot extends IterativeRobot {
     	step =0;
     }
     
+    public void rampRelease() {
+    	rampSolenoid.set(true);
+    }
+    
+    public void rampHold() {
+    	rampSolenoid.set(false);
+    }
     
     public void elevatorFast() {
     	elevatorSolenoid.set(false);
@@ -1139,7 +1143,6 @@ public class Robot extends IterativeRobot {
 	    		
 	    	case 12: //Arm Motor
 	    		motorEncoder = _armMotor.getSelectedSensorPosition(0);
-				wristSolenoid.set(true);
 	    		if(motorEncoder > 3000) {
 	    			//_armMotor.setSelectedSensorPosition(0, 0, 10);
 	    	    	motorDirection = -1;
