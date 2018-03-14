@@ -16,12 +16,18 @@ import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.Solenoid;
+
+import java.awt.geom.Point2D;
+import java.util.ArrayList;
+
 import org.cafirst.frc.team5406.util.XboxController;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.PowerDistributionPanel;
 import edu.wpi.first.wpilibj.Compressor;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.DriverStation;
 
 
 /**
@@ -77,6 +83,17 @@ public class Robot extends IterativeRobot {
 	DifferentialDrive _drive = new DifferentialDrive(_frontLeftMotor, _frontRightMotor);
 	public static AHRS navX = new AHRS(SPI.Port.kMXP);
 	
+	   ArrayList<double[]> motionProfile = new ArrayList<double[]>();
+		ArrayList<Double> pathLeft = new ArrayList<Double>();
+		ArrayList<Double> pathRight = new ArrayList<Double>();
+		ArrayList<Double> pathAngles = new ArrayList<Double>();
+		double totalDistanceLeft = 0;
+		double totalDistanceRight = 0;
+		double revPerInch = 0.075;
+		double maxSpeed = 5 * 12 * revPerInch * 60;
+		double minSpeed = 1 * 12 * revPerInch * 60;
+		double driveGearRatio = 4.125; //66/16
+		
 
     Solenoid elevatorSolenoid;
     Solenoid gripSolenoidLow;
@@ -87,6 +104,7 @@ public class Robot extends IterativeRobot {
 	int autoLoop = 0;
 	int step =0;
 	int stepA = 0;
+	boolean holdPosition = false;
 	boolean disabled = true;
 	boolean elevTestShift = false;
 	int[] pdpSlots = {
@@ -139,6 +157,7 @@ public class Robot extends IterativeRobot {
 	boolean buttonPress = false;
 	int kTimeoutMs = 10;
 	boolean isPracticeBot = false;
+	double WHEEL_BASE = 35.5;
 	
     private XboxController driverGamepad;
     private XboxController operatorGamepad;
@@ -155,16 +174,83 @@ public class Robot extends IterativeRobot {
 	boolean elevatorZeroed = false;
     
     boolean gripSpin = false;
+    double startTime = 0;
+    int lastPoint = 0;
+    double targetTime = 0;
+    boolean drivePathDone = false;
+    int autoStep = 0;
+	double GYRO_PID_P = 0.022;
+	double GYRO_PID_I = 0.000;
+	double GYRO_PID_D = 0.125;
+	int wristUpDelay = 0;
+    
+    class AutoRunnable implements java.lang.Runnable {
+    	private double targetAngle;
+    	private double accumI = 0.0;
+    	public double lastAngle = 0;
+    	private double previousError = 0.0;
+    	
+	    public void run() {
+	    	
+	    	double leftSpeed = 0;
+			double rightSpeed = 0;
+			double dSpeed = 0;
+			double speedChangeMultiplier = 0;
+			double targetSpeedLeft = 0;
+			double targetSpeedRight = 0;
+			double currentAngle = navX.getYaw();
+ 	
+	    	
+	    	if(!drivePathDone) {
+	    		System.out.println("Cur:" +  currentAngle + "Tar:"+ motionProfile.get(lastPoint)[5]);
+				speedChangeMultiplier = calcSpeed(motionProfile.get(lastPoint)[5] - currentAngle);
+	    		double elapsedTime = Timer.getFPGATimestamp() - startTime; 	
+		    	int numPoints = motionProfile.size();
+		    	if (elapsedTime > targetTime) {
+		    		if(lastPoint < numPoints -2) {
+		    			//System.out.println(lastPoint + ", " + motionProfile.get(lastPoint)[2]/1000 + ", " + motionProfile.get(lastPoint)[1]/1000);
+			    		targetTime += motionProfile.get(lastPoint)[0]/1000;
+			    		targetSpeedLeft = motionProfile.get(lastPoint)[2]*(4096/600);
+						leftSpeed =targetSpeedLeft+Math.signum(targetSpeedLeft)*targetSpeedLeft*speedChangeMultiplier; //-1*400-1200 = -1800
+			    		targetSpeedRight = motionProfile.get(lastPoint)[4]*(4096/600);
+						rightSpeed = targetSpeedRight-Math.signum(targetSpeedRight)*targetSpeedRight*speedChangeMultiplier; //400-1200 = -800
+						System.out.println("LS: "+ leftSpeed + ", LT: " + targetSpeedLeft + ", LA:" + _frontLeftMotor.getSelectedSensorVelocity(0) + ", RS: "+ rightSpeed + ", RT: " + targetSpeedRight + ", RA:" + _frontRightMotor.getSelectedSensorVelocity(0));
+			    		_frontRightMotor.set(ControlMode.Velocity,rightSpeed);
+						_frontLeftMotor.set(ControlMode.Velocity, leftSpeed);
+			    		lastPoint++;
+		    		}else {
+		    			_frontLeftMotor.set(ControlMode.Velocity,0);
+		    			_frontRightMotor.set(ControlMode.Velocity,0);
+		    			drivePathDone = true;
+		    		}
+		    	}
+	    	}
 
+	    }
+	    
+	    public double calcSpeed(double currentError){
+			
+	 		double valP = GYRO_PID_P * currentError;
+	 		double valI = accumI;
+	 		double valD = GYRO_PID_D * (previousError - currentError);
+	 		if(Math.abs(valD) > Math.abs(valP)) valD = valP; // Limit so that D isn't the driving number
+	 		accumI += GYRO_PID_I;
+	 		
+	 		//If we overshoot, reset the I
+	 		if(Math.signum(previousError) != Math.signum(currentError)){ 
+	 			accumI = 0; 
+	 			valI = 0;
+	 		}
+	 		double speed = valP + (valI * (currentError > 0 ? 1.0 : -1.0)) - valD;
+	 		previousError = currentError;
+	 		return speed;
+	 	}
+	}
+	Notifier _autoLoop = new Notifier(new AutoRunnable());
+	
     class PeriodicRunnable implements java.lang.Runnable {
 	    public void run() { 
-	    	//shoulder = 155 deg
-	    	//wrist = 90 deg
-	    /*wrist up
-	     * arm to 105
-	     * wrist down
-	     * arm all the way up
-	     */
+
 	    	int armPos;
 	    	
 	    	switch (flipWrist) {
@@ -186,38 +272,7 @@ public class Robot extends IterativeRobot {
 	    		break;
 	    		
 	    	}
-	    	/*case 1:
-	    		
-		    	if(_armMotor.getSelectedSensorPosition(0) > 5500) {
-		    		
-		    		wristDown();
-		    	}
-		    	flipWrist = 2;
-		    	break;
-	    	case 2:
-		    	if(_armMotor.getSelectedSensorPosition(0) < 5500) {
-		    		flipWrist = 5;
-		    		wristUp();
-		    	}
-		    	
-		    	break;
-	    	
-	    	case 3:
-		    	if(_armMotor.getSelectedSensorPosition(0) < 500) {
-		    		
-		    		wristUp();
-		    	}
-		    	flipWrist = 4;
-		    	break;
-	    	case 4:
-		    	if(_armMotor.getSelectedSensorPosition(0) > 500) {
-		    		flipWrist = 5;
-		    		wristDown();
-		    	}
-		    	break;
-	    	
-		    	
-	    	}*/
+
 	    }
 	}
 	Notifier _notifier = new Notifier(new PeriodicRunnable());
@@ -233,6 +288,25 @@ public class Robot extends IterativeRobot {
 	    	
 	    	_frontLeftMotor.configOpenloopRamp(0.25, kTimeoutMs);
 	    	_frontRightMotor.configOpenloopRamp(0.25, kTimeoutMs);
+	    	_frontLeftMotor.configClosedloopRamp(0.08, kTimeoutMs);
+	    	_frontRightMotor.configClosedloopRamp(0.08, kTimeoutMs);
+	    	_frontLeftMotor.selectProfileSlot(0,0);
+	    	_frontLeftMotor.config_kF(0, .8, kTimeoutMs);
+	    	_frontLeftMotor.config_kP(0, 0.2, kTimeoutMs);
+	    	_frontLeftMotor.config_kI(0, 0.0001, kTimeoutMs);
+	    	_frontLeftMotor.config_kD(0, 0.001, kTimeoutMs);
+	    	_frontRightMotor.selectProfileSlot(0,0);
+	    	_frontRightMotor.config_kF(0, .8, kTimeoutMs);
+	    	_frontRightMotor.config_kP(0, 0.2, kTimeoutMs);
+	    	_frontRightMotor.config_kI(0, 0.0001, kTimeoutMs);
+	    	_frontRightMotor.config_kD(0, 0.001, kTimeoutMs);
+	    	_frontRightMotor.setSensorPhase(false);
+	    	_frontRightMotor.setInverted(true);
+	    	_rightSlave1.setInverted(true);
+	    	_rightSlave2.setInverted(true);
+	    	_rightSlave3.setInverted(true);
+	    	
+	    	
 	    	_elevatorSlave1.follow(_elevatorMotor);
 	    	_intakeSlave1.follow(_intakeMotor);
 	    	_intakeSlave1.setInverted(true);
@@ -290,9 +364,7 @@ public class Robot extends IterativeRobot {
 			/* set acceleration and vcruise velocity - see documentation */
 	    	_wristMotor.configMotionCruiseVelocity(4000, kTimeoutMs);
 	    	_wristMotor.configMotionAcceleration(8000, kTimeoutMs);
-			/* zero the sensor */
-	    	_wristMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
-	    	_wristMotor.set(ControlMode.PercentOutput, 0);
+			
 	
 	    	
 	    	_armMotor.selectProfileSlot(0,0);
@@ -308,9 +380,7 @@ public class Robot extends IterativeRobot {
 			/* set acceleration and vcruise velocity - see documentation */
 	    	_armMotor.configMotionCruiseVelocity(2000, kTimeoutMs);
 	    	_armMotor.configMotionAcceleration(4000, kTimeoutMs);
-			/* zero the sensor */
-	    	_armMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
-	    	_armMotor.set(ControlMode.PercentOutput, 0);
+			
 	
 	    	
 	    	//Elevator Up
@@ -329,9 +399,7 @@ public class Robot extends IterativeRobot {
 			/* set acceleration and vcruise velocity - see documentation */
 	    	_elevatorMotor.configMotionCruiseVelocity(27000, kTimeoutMs);
 	    	_elevatorMotor.configMotionAcceleration(125000, kTimeoutMs);
-			/* zero the sensor */
-	    	_elevatorMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
-	    	_elevatorMotor.set(ControlMode.PercentOutput, 0);
+			
 	    	
 	    	
 	    	
@@ -350,6 +418,18 @@ public class Robot extends IterativeRobot {
     	
 
 		}
+	}
+	
+	public void zeroMotors() {
+		/* zero the sensor */
+    	_elevatorMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+    	_elevatorMotor.set(ControlMode.PercentOutput, 0);
+    	/* zero the sensor */
+    	_armMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+    	_armMotor.set(ControlMode.PercentOutput, 0);
+    	/* zero the sensor */
+    	_wristMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+    	_wristMotor.set(ControlMode.PercentOutput, 0);
 	}
 	
     /**
@@ -379,7 +459,7 @@ public class Robot extends IterativeRobot {
 
     	
     	setupMotors();
-    
+    	zeroMotors();
     }
     public void disabledInit() {
     	disabled = true;
@@ -387,12 +467,13 @@ public class Robot extends IterativeRobot {
     	_elevatorMotor.set(ControlMode.PercentOutput, 0);
     	_wristMotor.set(ControlMode.PercentOutput, 0);
     	_armMotor.set(ControlMode.PercentOutput, 0);
+    	_autoLoop.stop();
     }
     
     public void teleopInit() {
+    	_autoLoop.stop();
     	setupMotors();
 		_wristMotor.set(ControlMode.MotionMagic, _wristMotor.getSelectedSensorPosition(0));
-
     }
 
     /**
@@ -413,41 +494,6 @@ public class Robot extends IterativeRobot {
 		
 		
 		
-		if(!wristZeroed) {
-			wristOverrideNew = true;
-			_wristMotor.set(0.5);
-			System.out.print(_wristMotor.getOutputCurrent());
-			if(_wristMotor.getOutputCurrent()>15) {
-				_wristMotor.setSelectedSensorPosition(150, 0, kTimeoutMs);
-				wristUp();
-				wristZeroed = true;
-				wristSet = true;
-				wristOverrideNew = false;
-			}
-		}
-		
-		if(!armZeroed) {
-			_armMotor.set(-0.5);
-			armOverrideNew = true;
-
-			if(_armMotor.getOutputCurrent()>5) {
-				_armMotor.setSelectedSensorPosition(-10, 0, kTimeoutMs);
-				armDown();
-				armZeroed = true;
-				armOverrideNew = false;
-			}
-		}
-		
-		if(!elevatorZeroed) {
-			_elevatorMotor.set(-0.5);
-			elevatorOverrideNew = true;
-			if(_elevatorMotor.getOutputCurrent()>5) {
-				_elevatorMotor.setSelectedSensorPosition(-500, 0, kTimeoutMs);
-				elevatorDown();
-				elevatorZeroed = true;
-				elevatorOverrideNew = false;
-			}
-		}
 
 
 
@@ -476,8 +522,8 @@ public class Robot extends IterativeRobot {
 			rampRelease();
 		}
 		
-        _drive.arcadeDrive(precisionDriveY*driverGamepad.getLeftY(), precisionDriveX*driverGamepad.getLeftX());
 
+			_drive.arcadeDrive(precisionDriveX*driverGamepad.getLeftX(), precisionDriveY*driverGamepad.getLeftY());
         //displayCurrent();
 		
 		if(driverGamepad.getButtonHeld(XboxController.RIGHT_BUMPER)){
@@ -650,7 +696,9 @@ public class Robot extends IterativeRobot {
 			}
 			break;
 		case LEFT:
-			
+			if(operatorGamepad.getButtonHeld(XboxController.START_BUTTON)) {
+				_armMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+			}
 			break;
 		case RIGHT:
 		case NONE:
@@ -694,16 +742,7 @@ public class Robot extends IterativeRobot {
 		
     }
     
-    public void autonomousInit() {
-    	setupMotors();
-    	autoLoop=0;
-    	//shiftSolenoid.set(true);
-    	_frontLeftMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
-    	_frontRightMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
-    	speed =0;
-    	step =0;
-    }
-    
+   
     public void rampRelease() {
     	rampSolenoid.set(true);
     }
@@ -758,6 +797,8 @@ public class Robot extends IterativeRobot {
     
     public double wristFlipPos(int armPos) {
     	return 1E-05*armPos*armPos - 0.4935*armPos - 5E-11;
+    	//return -0.0002*armPos*armPos + 1.0437*armPos - 2800;
+
 
     }
     
@@ -814,100 +855,332 @@ public class Robot extends IterativeRobot {
         	SmartDashboard.putNumber("Right Drive 3", pdp.getCurrent(pdpSlots[6]));
         	SmartDashboard.putNumber("Right Drive 4", pdp.getCurrent(pdpSlots[7]));
     }
-   public void autonomousPeriodic() {
-    	
-    	double positionLeft = _frontLeftMotor.getSelectedSensorPosition(0);
-    	double positionRight = _frontRightMotor.getSelectedSensorPosition(0);
-    	
-    	switch(step) {
-    	case 0:
-    		wristDown();
-    		elevatorUp();
-    		step = 1;
-    	case 1:
-    		speed+=0.015;
-    		if (positionLeft>10000) {
-    			step =2;
-    		}
-    		break;
-    	case 2:
-    		speed = 0.7;
-    		if(positionLeft > 35000) {
-    			step =3;
-    		}
-    		break;
-    	case 3:
-    		speed-=0.05;
-    		if(positionLeft > 51000 || speed <=0.1) {
-    			step =4;
-    		}
-    		break;
-    	case 4:
-    		if(positionLeft > 50000) {
-    			speed = -0.1;
-        		_intakeMotor.set(0.8);
-    		}else {
-    			speed=0;
-    			step = 5;
-    		}
-    		break;   
-    	case 5:
-    		_intakeMotor.set(0.8);
-    	}
-    	System.out.println(positionRight);
-    	_drive.tankDrive(speed,speed);
-    	/*switch(stepA) {
-    	case 0:
-	    	switch(step) {
-	    	case 0:
-	    		wristUp();
-	    		elevatorUp();
-	    		step = 1;
-	    	case 1:
-	    		speed+=0.015;
-	    		if (positionLeft>16133) {
-	    			step =1;
-	    		}
-	    		break;
-	    	case 2:
-	    		speed = 0.7;
-	    		if(positionLeft > 190000) {
-	    			step =2;
-	    		}
-	    		break;
-	    	case 3:
-	    		speed-=0.015;
-	    		if(positionLeft > 207000 || speed <=0.1) {
-	    			step =3;
-	    		}
-	    		break;
-	    	case 4:
-	    		
-	    		if(positionLeft > 208000) {
-	    			speed = -0.1;
-	    		}else {
-	    			speed=0;
-	    			step = 5;
-	    			stepA = 1;
-	    		}
-	    		break;   
-	    	}
-	    	_drive.tankDrive(speed,speed);
-    	break;
-    	case 1:
-    		if(positionLeft < 250000) {
-    			_drive.tankDrive(0.3,0.5);
-    		}else {
-            	_drive.tankDrive(0,0);
-            	stepA = 2;
-    		}
-    		break;
-    	case 2:
-    		_intakeMotor.set(0.5);
-    		break;
-    	}*/
-    	
+    public void autonomousInit() {
+    	setupMotors();
+		_wristMotor.set(ControlMode.MotionMagic, _wristMotor.getSelectedSensorPosition(0));
+
+    	_frontLeftMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+    	_frontRightMotor.setSelectedSensorPosition(0, 0, kTimeoutMs);
+    	startTime = Timer.getFPGATimestamp();
+         lastPoint = 0;
+        targetTime = 0;
+		pathLeft = new ArrayList<Double>();
+		pathRight = new ArrayList<Double>();
+		pathAngles = new ArrayList<Double>();
+         motionProfile = new ArrayList<double[]>();
+ 		drivePathDone = false;
+         autoStep = 0;
+         navX.zeroYaw();
+         wristUpDelay = 0;
     }
+    
+   public void autonomousPeriodic() {
+	   	switch(autoStep) {
+	   	case 0:
+
+			if(!wristZeroed) {
+				_wristMotor.configForwardSoftLimitEnable(false, kTimeoutMs);
+				_wristMotor.configReverseSoftLimitEnable(false, kTimeoutMs);
+				_wristMotor.set(0.5);
+				System.out.print(_wristMotor.getOutputCurrent());
+				if(_wristMotor.getOutputCurrent()>15) {
+					_wristMotor.setSelectedSensorPosition(150, 0, kTimeoutMs);
+					_wristMotor.configForwardSoftLimitEnable(false, kTimeoutMs);
+					_wristMotor.configReverseSoftLimitEnable(false, kTimeoutMs);
+					wristUp();
+					wristZeroed = true;
+				}
+			}
+			
+			if(!armZeroed) {
+				_armMotor.set(-0.5);
+				_armMotor.configForwardSoftLimitEnable(false, kTimeoutMs);
+				_armMotor.configReverseSoftLimitEnable(false, kTimeoutMs);
+
+				if(_armMotor.getOutputCurrent()>5) {
+					_armMotor.setSelectedSensorPosition(-10, 0, kTimeoutMs);
+					_armMotor.configForwardSoftLimitEnable(false, kTimeoutMs);
+					_armMotor.configReverseSoftLimitEnable(false, kTimeoutMs);
+					armDown();
+					armZeroed = true;
+				}
+			}
+			
+			if(!elevatorZeroed) {
+				_elevatorMotor.set(-0.5);
+				_elevatorMotor.configForwardSoftLimitEnable(false, kTimeoutMs);
+				_elevatorMotor.configReverseSoftLimitEnable(false, kTimeoutMs);
+				if(_elevatorMotor.getOutputCurrent()>5) {
+					_elevatorMotor.setSelectedSensorPosition(-500, 0, kTimeoutMs);
+					_elevatorMotor.configForwardSoftLimitEnable(true, kTimeoutMs);
+					_elevatorMotor.configReverseSoftLimitEnable(true, kTimeoutMs);
+					elevatorDown();
+					elevatorZeroed = true;
+				}
+			}
+			
+			autoStep++;
+			break;
+	   	case 1:
+	   	   String gameData;
+	   	   gameData = DriverStation.getInstance().getGameSpecificMessage();
+           if(gameData.length() > 0)
+           {
+        	   ArrayList<Point2D> left = new ArrayList<Point2D>();
+        	   left.add(new Point2D.Double(0, 0));
+				
+			  if(gameData.charAt(0) == 'L')
+			  {
+				  left.add(new Point2D.Double(-60, 107));
+				  bezierPoints(left, 0, 5);
+			  } else {
+				  left.add(new Point2D.Double(40, 107));
+				  bezierPoints(left, 0, 355);
+			  }
+				
+			  _autoLoop.startPeriodic(0.005);
+			  autoStep++;
+           }
+           break;
+	   	case 2:
+	   		if(drivePathDone) {
+	   			autoStep++;
+	   		}
+	   		break;
+	   	case 3:
+   	   		wristSlightDown();
+   	   		needsWristUp = true;
+   	   		if(_wristMotor.getSelectedSensorPosition(0) < -350) {
+   	   			_intakeMotor.set(0.7);
+   	   		}
+	   		break;
+	   	case 4:
+	   		wristUpDelay++;
+	   		if(wristUpDelay > 200) {
+	   			_intakeMotor.set(0);
+	   			wristUp();
+	   		}
+	   	}
+               
+   		
+    }
+   
+   public Point2D[] findControlPoints(Point2D s1, Point2D s2, Point2D s3) {
+		Point2D[] controlPoints = new Point2D[2];
+		double l1 = s1.distance(s2);
+		double l2 = s2.distance(s3);
+		Point2D m1 = new Point2D.Double((s1.getX() + s2.getX()) / 2.0, (s1.getY() + s2.getY()) / 2.0);
+		Point2D m2 = new Point2D.Double((s2.getX() + s3.getX()) / 2.0, (s2.getY() + s3.getY()) / 2.0);
+		double dxm = m1.getX() - m2.getX();
+		double dym = m1.getY() - m2.getY();
+		double k = l2 / (l1 + l2);
+		Point2D cm = new Point2D.Double(m2.getX() + dxm * k, m2.getY() + dym * k);
+		double tx = s2.getX() - cm.getX();
+		double ty = s2.getY() - cm.getY();
+		controlPoints[0] = new Point2D.Double(m1.getX() + tx, m1.getY() + ty);
+		controlPoints[1] = new Point2D.Double(m2.getX() + tx, m2.getY() + ty);
+		return controlPoints;
+	}
+
+	public ArrayList<Point2D> plotBezierQuad(Point2D s1, Point2D s2, Point2D s3, Point2D s4) {
+
+		ArrayList<Point2D> leftWheel = new ArrayList<Point2D>();
+		ArrayList<Point2D> rightWheel = new ArrayList<Point2D>();
+
+		Point2D[] S1 = findControlPoints(s1, s2, s3);
+		Point2D[] S2 = findControlPoints(s2, s3, s4);
+		double l1 = Math.floor(s1.distance(s2));
+		double l2 = Math.floor(s2.distance(s3));
+		double l3 = Math.floor(s3.distance(s4));
+
+		double step = 1;
+
+		int ctr = (int) Math.floor(((l1 > 0 ? l1 : l2) + (l3 > 0 ? l3 : l2)) / step); // scale by step to change number
+																						// of points interpolated
+		Point2D p1 = (Point2D) s2.clone();
+		Point2D p2 = S1[1];
+		Point2D p3 = S2[0];
+		Point2D p4 = (Point2D) s3.clone();
+
+		// Now do actual bezier math
+		Point2D pf = p1;
+		double ss = 1.0 / (ctr + 1), ss2 = ss * ss, ss3 = ss2 * ss, pre1 = 3.0 * ss, pre2 = 3.0 * ss2, pre4 = 6.0 * ss2,
+				pre5 = 6.0 * ss3, tmp1x = p1.getX() - p2.getX() * 2.0 + p3.getX(),
+				tmp1y = p1.getY() - p2.getY() * 2.0 + p3.getY(),
+				tmp2x = (p2.getX() - p3.getX()) * 3.0 - p1.getX() + p4.getX(),
+				tmp2y = (p2.getY() - p3.getY()) * 3.0 - p1.getY() + p4.getY(),
+				dfx = (p2.getX() - p1.getX()) * pre1 + tmp1x * pre2 + tmp2x * ss3,
+				dfy = (p2.getY() - p1.getY()) * pre1 + tmp1y * pre2 + tmp2y * ss3, ddfx = tmp1x * pre4 + tmp2x * pre5,
+				ddfy = tmp1y * pre4 + tmp2y * pre5, dddfx = tmp2x * pre5, dddfy = tmp2y * pre5;
+		// System.out.println(ctr);
+		double m_right;
+		double dy_right;
+		double dx_right;
+		double distanceLeft = 0;
+		double distanceRight = 0;
+		double angle = 0;
+		boolean firstRight = true;
+		Point2D pt2 = (Point2D) pf.clone();
+		Point2D last_pt = (Point2D) pt2.clone();
+		while (ctr > 0) {
+			ctr--;
+			pf.setLocation(pf.getX() + dfx, pf.getY() + dfy);
+			m_right = -1 * dfx / dfy;
+			dx_right = WHEEL_BASE / Math.sqrt(m_right * m_right + 1);
+			dy_right = m_right * dx_right;
+			distanceLeft = Math.sqrt(dfx * dfx + dfy * dfy) * revPerInch;
+
+			if (dfy < 0) {
+				pt2.setLocation(pf.getX() - dx_right, pf.getY() - dy_right);
+			} else {
+				pt2.setLocation(pf.getX() + dx_right, pf.getY() + dy_right);
+			}
+			if(firstRight) {
+				firstRight = false;
+				last_pt.setLocation(pt2.getX(), pt2.getY());
+			}
+			//System.out.println("Rpt: " + pt2.getX() + ", " + pt2.getY() + ", " + last_pt.getX() + ", " + last_pt.getY());
+			distanceRight = pt2.distance(last_pt)*revPerInch;
+			last_pt.setLocation(pt2.getX(), pt2.getY());
+			
+			totalDistanceLeft += distanceLeft;
+			totalDistanceRight += distanceRight;
+			pathLeft.add(distanceLeft);
+			pathRight.add(distanceRight);
+			rightWheel.add(pt2);
+			dfx += ddfx;
+			dfy += ddfy;
+			ddfx += dddfx;
+			ddfy += dddfy;
+			pathAngles.add(Math.toDegrees(Math.atan2(dfx, dfy)));
+			leftWheel.add(pf);
+
+			//System.out.println(pf.getX() + ", " + pf.getY() + ", " + pt2.getX() + ", " + pt2.getY());
+		}
+		pf.setLocation(p4.getX(), p4.getY());
+		leftWheel.add(pf);
+		m_right = -1 * dfx / dfy;
+		dx_right = WHEEL_BASE / Math.sqrt(m_right * m_right + 1);
+		dy_right = m_right * dx_right;
+		if (dfy < 0) {
+			pt2.setLocation(pf.getX() - dx_right, pf.getY() - dy_right);
+		} else {
+			pt2.setLocation(pf.getX() + dx_right, pf.getY() + dy_right);
+		}
+		rightWheel.add(pt2);
+		//System.out.println(pf.getX() + ", " + pf.getY() + ", " + pt2.getX() + ", " + pt2.getY());
+
+		return leftWheel;
+	}
+
+
+	public void bezierPoints(ArrayList<Point2D> pts, double angleIn, double angleOut) {
+
+		/*
+		 * duplicate first and last points loop over sets of 4 points 0...3; 1...4, etc.
+		 */
+		// System.out.println("BezierPoints Function");
+		if (pts.size() >= 2) {
+			Point2D startControl = new Point2D.Double(pts.get(1).getX() + (2*(pts.get(0).getY() - pts.get(1).getY())*(Math.sin(angleIn*Math.PI/180))),
+					pts.get(1).getY() + (2*(pts.get(0).getY() - pts.get(1).getY())*(Math.cos(angleIn*Math.PI/180))));
+			Point2D endControl  = new Point2D.Double(pts.get(pts.size()-2).getX() + (2*(pts.get(pts.size()-1).getY() - pts.get(pts.size()-2).getY())*(Math.sin(angleOut*Math.PI/180))),
+					pts.get(pts.size()-2).getY() + (2*(pts.get(pts.size()-1).getY() - pts.get(pts.size()-2).getY())*(Math.cos(angleOut*Math.PI/180))));
+
+
+			
+			pts.add(0, startControl);
+			pts.add(endControl);
+			int pt_i = 0;
+			do {
+				plotBezierQuad(pts.get(pt_i), pts.get(pt_i + 1), pts.get(pt_i + 2), pts.get(pt_i + 3));
+				pt_i++;
+			} while ((pt_i + 3) < pts.size());
+			
+			double distanceLeft = 0;
+			double distanceRight = 0;
+			double accDistance = 0;
+			double decDistance = 0;
+			double targetSpeed = maxSpeed;
+			double timeLeft = 0;
+			double maxDistance =0;
+			double totalDistance =0;
+			double speedLeft=0, speedRight = 0;
+			double cDistanceLeft=0, cDistanceRight = 0;
+			double timeRight = 0;
+			double accRevs=2;
+			double angle = 0;
+			double[] motionProfileData = new double[6];
+
+			totalDistance = Math.max(totalDistanceLeft, totalDistanceRight);
+
+			for (int i = 0; i < pathLeft.size(); i++) {
+
+				distanceLeft = pathLeft.get(i);
+				distanceRight = pathRight.get(i);
+				cDistanceLeft+=distanceLeft;
+				cDistanceRight+=distanceRight;
+
+				if(totalDistance < 2*accRevs) {
+					accDistance = totalDistance/2;
+					decDistance = accDistance;
+				}else {
+					accDistance = accRevs;
+					decDistance = totalDistance - accRevs;
+				}
+				
+				maxDistance = Math.max(cDistanceLeft, cDistanceRight);
+				if(maxDistance < accDistance) {
+					targetSpeed = minSpeed+(maxSpeed-minSpeed)*maxDistance/accRevs;
+				}else if (maxDistance>=accDistance && maxDistance<=decDistance) {
+					targetSpeed=maxSpeed;
+				}else {
+					targetSpeed = minSpeed+(maxSpeed-minSpeed)*(totalDistance-maxDistance)/accRevs;
+				}
+				//targetSpeed = maxSpeed;
+				
+				if(distanceLeft > distanceRight) {
+					speedLeft = targetSpeed;
+					timeLeft = 60000 * distanceLeft / speedLeft;
+					timeRight = timeLeft;
+					speedRight = 60000*distanceRight/timeRight;
+				}else {
+					speedRight = targetSpeed;
+					timeRight = 60000 * distanceRight / speedRight;
+					timeLeft = timeRight;
+					speedLeft = 60000*distanceLeft/timeLeft;
+				}
+				
+				motionProfileData = new double[6];
+				motionProfileData[0] = timeLeft;
+				motionProfileData[1] = cDistanceLeft;
+				motionProfileData[2] = speedLeft;
+				motionProfileData[3] = cDistanceRight;
+				motionProfileData[4] = speedRight;
+				motionProfileData[5] = pathAngles.get(i) - angleIn;
+
+				motionProfile.add(motionProfileData);
+
+			}
+			
+
+			
+			/*System.out.println("Left motion profile");
+			for (int i = 0; i < motionProfileLeft.size(); i++) {
+				System.out.println(motionProfileLeft.get(i)[0] + ", " + motionProfileLeft.get(i)[1] + ", "
+						+ motionProfileLeft.get(i)[2]);
+			}
+			System.out.println("Right motion profile");
+			for (int i = 0; i < motionProfileRight.size(); i++) {
+				System.out.println(motionProfileRight.get(i)[0] + ", " + motionProfileRight.get(i)[1] + ", "
+						+ motionProfileRight.get(i)[2]);
+			}*/
+			//System.out.println(motionProfileLeft.get(motionProfileLeft.size()-1)[0]);
+			//System.out.println(motionProfileRight.get(motionProfileRight.size()-1)[0]);
+
+
+		}
+	}
+	
     public void testInit() {
     	_leftSlave1.follow(_leftSlave1);
     	_leftSlave2.follow(_leftSlave2);
@@ -959,7 +1232,7 @@ public class Robot extends IterativeRobot {
 	    		motorEncoder = _frontLeftMotor.getSelectedSensorPosition(0);
 	    		if(Math.abs(motorEncoder) > 40000) {
 	    	    	_frontLeftMotor.setSelectedSensorPosition(0, 0, 10);
-	    	    	motorDirection *= -1;
+	    	    	//motorDirection *= -1;
 	    	    	System.out.println("Reached 40000 ticks, switching direction");
 	    		}
 	    		if(motorCurrentCount==0) {
@@ -976,7 +1249,7 @@ public class Robot extends IterativeRobot {
 	    		if(Math.abs(motorEncoder) > 40000) {
 	    			elevatorSolenoid.set(false);
 	    			_frontLeftMotor.setSelectedSensorPosition(0, 0, 10);
-	    	    	motorDirection *= -1;
+	    	    	//motorDirection *= -1;
 	    	    	System.out.println("Reached 40000 ticks, switching direction");
 	    		}
 	    		if(motorCurrentCount==0) {
@@ -992,7 +1265,7 @@ public class Robot extends IterativeRobot {
 	    		motorEncoder = _frontLeftMotor.getSelectedSensorPosition(0);
 	    		if(Math.abs(motorEncoder) > 40000) {
 	    			_frontLeftMotor.setSelectedSensorPosition(0, 0, 10);
-	    	    	motorDirection *= -1;
+	    	    	//motorDirection *= -1;
 	    	    	System.out.println("Reached 40000 ticks, switching direction");
 	    		}
 	    		if(motorCurrentCount==0) {
@@ -1008,7 +1281,7 @@ public class Robot extends IterativeRobot {
 	    		motorEncoder = _frontLeftMotor.getSelectedSensorPosition(0);
 	    		if(Math.abs(motorEncoder) > 40000) {
 	    			_frontLeftMotor.setSelectedSensorPosition(0, 0, 10);
-	    	    	motorDirection *= -1;
+	    	    	//motorDirection *= -1;
 	    	    	System.out.println("Reached 40000 ticks, switching direction");
 	    		}
 	    		if(motorCurrentCount==0) {
@@ -1025,7 +1298,7 @@ public class Robot extends IterativeRobot {
 	    		motorEncoder = _frontRightMotor.getSelectedSensorPosition(0);
 	    		if(Math.abs(motorEncoder) > 40000) {
 	    			_frontRightMotor.setSelectedSensorPosition(0, 0, 10);
-	    	    	motorDirection *= -1;
+	    	    	//motorDirection *= -1;
 	    	    	System.out.println("Reached 40000 ticks, switching direction");
 	    		}
 	    		if(motorCurrentCount==0) {
@@ -1041,7 +1314,7 @@ public class Robot extends IterativeRobot {
 	    		motorEncoder = _frontRightMotor.getSelectedSensorPosition(0);
 	    		if(Math.abs(motorEncoder) > 40000) {
 	    			_frontRightMotor.setSelectedSensorPosition(0, 0, 10);
-	    	    	motorDirection *= -1;
+	    	    	//motorDirection *= -1;
 	    	    	System.out.println("Reached 40000 ticks, switching direction");
 	    		}
 	    		if(motorCurrentCount==0) {
@@ -1057,7 +1330,7 @@ public class Robot extends IterativeRobot {
 	    		motorEncoder = _frontRightMotor.getSelectedSensorPosition(0);
 	    		if(Math.abs(motorEncoder) > 40000) {
 	    			_frontRightMotor.setSelectedSensorPosition(0, 0, 10);
-	    	    	motorDirection *= -1;
+	    	    	//motorDirection *= -1;
 	    	    	System.out.println("Reached 40000 ticks, switching direction");
 	    		}
 	    		if(motorCurrentCount==0) {
@@ -1073,7 +1346,7 @@ public class Robot extends IterativeRobot {
 	    		motorEncoder = _frontRightMotor.getSelectedSensorPosition(0);
 	    		if(Math.abs(motorEncoder) > 40000) {
 	    			_frontRightMotor.setSelectedSensorPosition(0, 0, 10);
-	    	    	motorDirection *= -1;
+	    	    	//motorDirection *= -1;
 	    	    	System.out.println("Reached 40000 ticks, switching direction");
 	    		}
 	    		if(motorCurrentCount==0) {
