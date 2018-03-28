@@ -2,6 +2,7 @@ package org.cafirst.frc.team5406.subsystems;
 
 
 import org.cafirst.frc.team5406.robot.Constants;
+import org.cafirst.frc.team5406.util.PolynomialRegression;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.FeedbackDevice;
 import com.ctre.phoenix.motorcontrol.StatusFrameEnhanced;
@@ -20,11 +21,11 @@ public class Intake extends Subsystems{
     Solenoid gripSolenoidHigh;
     Solenoid rampSolenoid;
     	
-	public WPI_TalonSRX _intakeMotor= new WPI_TalonSRX(10);
+	public WPI_TalonSRX _intakeRightMotor= new WPI_TalonSRX(10);
 	
 	/*Comp Bot has a Victor for ID #9 - Intake, Practice Bot has a Talon*/
-	//WPI_VictorSPX _intakeSlave1 = new WPI_VictorSPX(9);
-	public WPI_VictorSPX _intakeSlave1 = new WPI_VictorSPX(9);
+	//public WPI_VictorSPX _intakeSlave1 = new WPI_VictorSPX(9);
+	public WPI_TalonSRX _intakeLeftMotor = new WPI_TalonSRX(9);
 
 	public Compressor compressor = new Compressor();
 	public WPI_TalonSRX _elevatorMotor= new WPI_TalonSRX(12); //
@@ -46,12 +47,22 @@ public class Intake extends Subsystems{
 	public boolean armZeroed = false;
 	public boolean elevatorZeroed = false;
 	public boolean needsWristUp = false;
-    
+	public boolean wristOut = false;
+    PolynomialRegression profileUpIn;
+    PolynomialRegression profileUpOut;
+    PolynomialRegression profileDownIn;
+    PolynomialRegression profileDownOut;
+
 	public Intake(){
     	gripSolenoidHigh = new Solenoid(Constants.GRIP_HIGH);
     	elevatorSolenoid = new Solenoid(Constants.ELEVATOR_SHIFT);
     	rampSolenoid = new Solenoid(Constants.RAMP_RELEASE);
     	gripSolenoidLow = new Solenoid(Constants.GRIP_LOW);
+    	
+        profileUpIn = new PolynomialRegression(Constants.PROFILE_UP_IN_ARM, Constants.PROFILE_UP_IN_WRIST, 3);
+        profileUpOut = new PolynomialRegression(Constants.PROFILE_UP_OUT_ARM, Constants.PROFILE_UP_OUT_WRIST, 3);
+        profileDownIn = new PolynomialRegression(Constants.PROFILE_DOWN_IN_ARM, Constants.PROFILE_DOWN_IN_WRIST, 3);
+        profileDownOut = new PolynomialRegression(Constants.PROFILE_DOWN_OUT_ARM, Constants.PROFILE_DOWN_OUT_WRIST, 3);
 
 	
 	}
@@ -59,21 +70,26 @@ public class Intake extends Subsystems{
 		if(disabled) {
 			disabled = false;	
 	    	
-	    	_elevatorSlave1.follow(_elevatorMotor);
-	    	_intakeSlave1.follow(_intakeMotor);
-	    	_intakeSlave1.setInverted(true);
+			_elevatorSlave1.follow(_elevatorMotor);
+	    	//_intakeSlave1.follow(_intakeMotor);
+	    	_intakeLeftMotor.setInverted(true);
 	    	
 	    	_armMotor.setSensorPhase(false);
 	    	_wristMotor.setSensorPhase(false);
-	
+	    	_intakeRightMotor.setSensorPhase(false);
+	    	_intakeLeftMotor.setSensorPhase(false);
 			_armMotor.configContinuousCurrentLimit(40, Constants.kTimeoutMs);
 			_armMotor.configPeakCurrentLimit(60, Constants.kTimeoutMs);
 			_armMotor.configPeakCurrentDuration(30, Constants.kTimeoutMs);
 			_armMotor.enableCurrentLimit(true);
-			_intakeMotor.configContinuousCurrentLimit(40, Constants.kTimeoutMs);
-			_intakeMotor.configPeakCurrentLimit(40, Constants.kTimeoutMs);
-			_intakeMotor.configPeakCurrentDuration(40, Constants.kTimeoutMs);
-			_intakeMotor.enableCurrentLimit(true);
+			_intakeRightMotor.configContinuousCurrentLimit(40, Constants.kTimeoutMs);
+			_intakeRightMotor.configPeakCurrentLimit(40, Constants.kTimeoutMs);
+			_intakeRightMotor.configPeakCurrentDuration(40, Constants.kTimeoutMs);
+			_intakeRightMotor.enableCurrentLimit(true);
+			_intakeLeftMotor.configContinuousCurrentLimit(40, Constants.kTimeoutMs);
+			_intakeLeftMotor.configPeakCurrentLimit(40, Constants.kTimeoutMs);
+			_intakeLeftMotor.configPeakCurrentDuration(40, Constants.kTimeoutMs);
+			_intakeLeftMotor.enableCurrentLimit(true);
 			_wristMotor.configContinuousCurrentLimit(30, Constants.kTimeoutMs);
 			_wristMotor.configPeakCurrentLimit(30, Constants.kTimeoutMs);
 			_wristMotor.configPeakCurrentDuration(30, Constants.kTimeoutMs);
@@ -85,6 +101,10 @@ public class Intake extends Subsystems{
 			_armMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, Constants.kTimeoutMs);
 			_wristMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, Constants.kTimeoutMs);
 			_wristMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, Constants.kTimeoutMs);
+			_intakeRightMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, Constants.kTimeoutMs);
+			_intakeRightMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, Constants.kTimeoutMs);
+			_intakeLeftMotor.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 20, Constants.kTimeoutMs);
+			_intakeLeftMotor.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, Constants.kTimeoutMs);
 	
 	    	_wristMotor.selectProfileSlot(0,0);
 	    	_wristMotor.config_kF(0, 1, Constants.kTimeoutMs);
@@ -93,8 +113,8 @@ public class Intake extends Subsystems{
 	    	_wristMotor.config_kD(0, 0, Constants.kTimeoutMs);
 	    	_wristMotor.selectProfileSlot(1,0);
 	    	_wristMotor.config_kF(1, 1, Constants.kTimeoutMs);
-	    	_wristMotor.config_kP(1, 1, Constants.kTimeoutMs);
-	    	_wristMotor.config_kI(1, 0.001, Constants.kTimeoutMs);
+	    	_wristMotor.config_kP(1, 1.2, Constants.kTimeoutMs);
+	    	_wristMotor.config_kI(1, 0, Constants.kTimeoutMs);
 	    	_wristMotor.config_kD(1, 0, Constants.kTimeoutMs);
 			/* set acceleration and vcruise velocity - see documentation */
 	    	_wristMotor.configMotionCruiseVelocity(4000, Constants.kTimeoutMs);
@@ -108,13 +128,13 @@ public class Intake extends Subsystems{
 	    	_armMotor.config_kI(0, 0, Constants.kTimeoutMs);
 	    	_armMotor.config_kD(0, 0, Constants.kTimeoutMs);
 	    	_armMotor.selectProfileSlot(1,0);
-	    	_armMotor.config_kF(1, 0.2, Constants.kTimeoutMs);
-	    	_armMotor.config_kP(1, 0.3, Constants.kTimeoutMs);
+	    	_armMotor.config_kF(1, 0.4, Constants.kTimeoutMs);
+	    	_armMotor.config_kP(1, 0.4, Constants.kTimeoutMs);
 	    	_armMotor.config_kI(1, 0, Constants.kTimeoutMs);
 	    	_armMotor.config_kD(1, 0, Constants.kTimeoutMs);
 			/* set acceleration and vcruise velocity - see documentation */
 	    	_armMotor.configMotionCruiseVelocity(6000, Constants.kTimeoutMs);
-	    	_armMotor.configMotionAcceleration(6000, Constants.kTimeoutMs);
+	    	_armMotor.configMotionAcceleration(12000, Constants.kTimeoutMs);
 			
 	
 	    	
@@ -133,15 +153,27 @@ public class Intake extends Subsystems{
 	    	_elevatorMotor.config_kD(1, 0, Constants.kTimeoutMs);
 			/* set acceleration and vcruise velocity - see documentation */
 	    	_elevatorMotor.configMotionCruiseVelocity(30000, Constants.kTimeoutMs);
-	    	_elevatorMotor.configMotionAcceleration(250000, Constants.kTimeoutMs);
+	    	_elevatorMotor.configMotionAcceleration(100000, Constants.kTimeoutMs);
 			
-	    	
-	    	
+	    	//Intakes
+	    	_intakeLeftMotor.selectProfileSlot(0,0);
+	    	_intakeLeftMotor.config_kF(0, 0.128, Constants.kTimeoutMs);
+	    	_intakeLeftMotor.config_kP(0, 0.2, Constants.kTimeoutMs);
+	    	_intakeLeftMotor.config_kI(0, 0.0001, Constants.kTimeoutMs);
+	    	_intakeLeftMotor.config_kD(0, 0, Constants.kTimeoutMs);
+
+	    	_intakeRightMotor.selectProfileSlot(0,0);
+	    	_intakeRightMotor.config_kF(0, 0.128, Constants.kTimeoutMs);
+	    	_intakeRightMotor.config_kP(0, 0.2, Constants.kTimeoutMs);
+	    	_intakeRightMotor.config_kI(0, 0.0001, Constants.kTimeoutMs);
+	    	_intakeRightMotor.config_kD(0, 0, Constants.kTimeoutMs);
+
+			
 	    	
 	    	_elevatorMotor.configForwardSoftLimitThreshold(216000, Constants.kTimeoutMs);
 	    	_elevatorMotor.configReverseSoftLimitThreshold(0, Constants.kTimeoutMs);
 	    	_wristMotor.configForwardSoftLimitThreshold(0, Constants.kTimeoutMs);
-	    	_wristMotor.configReverseSoftLimitThreshold(-2700, Constants.kTimeoutMs);
+	    	_wristMotor.configReverseSoftLimitThreshold(-3100, Constants.kTimeoutMs);
 	    	_armMotor.configForwardSoftLimitThreshold(6900, Constants.kTimeoutMs);
 	    	_armMotor.configReverseSoftLimitThreshold(0, Constants.kTimeoutMs);
 	    	_armMotor.configForwardSoftLimitEnable(true, Constants.kTimeoutMs);
@@ -166,6 +198,16 @@ public class Intake extends Subsystems{
     	_wristMotor.set(ControlMode.PercentOutput, 0);
 	}
 	
+	public void spinIntake(double speed) {
+		if(speed ==0) {
+			_intakeLeftMotor.set(ControlMode.PercentOutput,0);
+			_intakeRightMotor.set(ControlMode.PercentOutput,0);
+
+		}else {
+		_intakeLeftMotor.set(ControlMode.Velocity,4096*speed/600);
+		_intakeRightMotor.set(ControlMode.Velocity,4096*speed/600);
+		}
+	}
 	 public void rampRelease() {
 	    	rampSolenoid.set(true);
 	    }
@@ -219,42 +261,27 @@ public class Intake extends Subsystems{
 	    }
 	    
 	    public double wristFlipPosUp(int armPos) {
-	    	//return 7E-05*armPos*armPos - 0.8862*armPos - 2E-11;
-	    	//return  8E-05*armPos*armPos - 0.9379*armPos + 4E-11;
-	    	//return 5E-05*armPos*armPos - 0.7135*armPos + 3E-11;
-	    	//return 1E-08*armPos*armPos*armPos - 0.0001*armPos*armPos - 0.1143*armPos - 7E-10;
-	    	return 2E-08*armPos*armPos*armPos - 0.0002*armPos*armPos - 0.0434*armPos - 8E-10;
-	    	//return 8E-05*armPos*armPos - 0.965*armPos - 2E-11;
-
-
-
-	    	//return 3E-05*armPos*armPos - 0.5823*armPos - 2E-11;
-	    	//return 1E-05*armPos*armPos - 0.4935*armPos - 5E-11;
-	    	//return -0.0002*armPos*armPos + 1.0437*armPos - 2800;
-
-
+	    	if(wristOut) {
+	    		return profileUpOut.predict(armPos);
+	    	}else {
+	    		return profileUpIn.predict(armPos);
+	    	}
 	    }
 	    
 	    public double wristFlipPosDown(int armPos) {
-	    	//return 7E-05*armPos*armPos - 0.8862*armPos - 2E-11;
-	    	//return  8E-05*armPos*armPos - 0.9379*armPos + 4E-11;
-	    	//return 5E-05*armPos*armPos - 0.7135*armPos + 3E-11;
-	    	return 6E-08*armPos*armPos*armPos - 0.0007*armPos*armPos + 1.5625*armPos - 1E-09;
-	    	//return 3E-08*armPos*armPos*armPos - 0.0003*armPos*armPos + 0.212*armPos - 1E-09;
-	    	//return 8E-05*armPos*armPos - 0.965*armPos - 2E-11;
-
-
-
-	    	//return 3E-05*armPos*armPos - 0.5823*armPos - 2E-11;
-	    	//return 1E-05*armPos*armPos - 0.4935*armPos - 5E-11;
-	    	//return -0.0002*armPos*armPos + 1.0437*armPos - 2800;
-
-
+	    	double wristPos;
+	    	if(wristOut) {
+	    		wristPos = profileDownOut.predict(armPos);
+	    	}else {
+	    		wristPos = profileDownIn.predict(armPos);
+	    	}
+	    	System.out.println(wristOut + ", " +armPos + ", " + wristPos);
+	    	return wristPos;
 	    }
 	    
 	    public void wristSlightUp() {
 	    	_wristMotor.selectProfileSlot(0,0);
-	    	_wristMotor.set(ControlMode.MotionMagic, -2100);
+	    	_wristMotor.set(ControlMode.MotionMagic, -2400);
 	    	wristUp = false;
 	    	manualWrist = false;
 	    }
@@ -273,6 +300,12 @@ public class Intake extends Subsystems{
 	    public void wristDown() {
 	    	_wristMotor.selectProfileSlot(1,0);
 	    	_wristMotor.set(ControlMode.MotionMagic, Constants.WRIST_DOWN);
+	    	wristUp = false;
+	    	manualWrist = false;
+	    }
+	    public void wristUpShot() {
+	    	_wristMotor.selectProfileSlot(0,0);
+	    	_wristMotor.set(ControlMode.MotionMagic, Constants.WRIST_UP_SHOT);
 	    	wristUp = false;
 	    	manualWrist = false;
 	    }

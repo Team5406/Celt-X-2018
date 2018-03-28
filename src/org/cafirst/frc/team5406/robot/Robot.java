@@ -125,7 +125,7 @@ public class Robot extends IterativeRobot {
 	    		robotIntake._wristMotor.selectProfileSlot(0,0);
 	    		armPos = robotIntake.getArmPosition();
 	    		robotIntake._wristMotor.set(ControlMode.MotionMagic, robotIntake.wristFlipPosDown(armPos));
-	    		if(armPos < 200) {
+	    		if(armPos < 100) {
 	    			flipWrist = 5;
 	    		}
 	    		break;
@@ -133,7 +133,7 @@ public class Robot extends IterativeRobot {
 	    		robotIntake._wristMotor.selectProfileSlot(0,0);
 	    		armPos = robotIntake.getArmPosition();
 	    		robotIntake._wristMotor.set(ControlMode.MotionMagic, robotIntake.wristFlipPosUp(armPos));
-	    		if(armPos > Constants.ARM_UP - 200) {
+	    		if(armPos > Constants.ARM_UP - 100) {
 	    			flipWrist = 5;
 	    		}
 	    		break;
@@ -210,7 +210,7 @@ public class Robot extends IterativeRobot {
 		
 		long elevatorPos = robotIntake.getElevatorPosition();
 		long armPos = robotIntake.getArmPosition();
-		//long wristPos = _wristMotor.getSelectedSensorPosition(0);
+		// long wristPos = robotIntake._wristMotor.getSelectedSensorPosition(0);
 		
 		
 		
@@ -225,17 +225,14 @@ public class Robot extends IterativeRobot {
     	
     	double precisionDriveX;
     	double precisionDriveY;
-    	
-		if(driverGamepad.getLeftTriggerPressed()){
-        	precisionDriveX = 0.5;
-        }else{
-        	precisionDriveX = 1;
-        }
+
 		
 		if(driverGamepad.getButtonHeld(XboxController.LEFT_BUMPER)){
         	precisionDriveY = 0.5;
+        	precisionDriveX = 0.5;
         }else{
         	precisionDriveY = 1;
+        	precisionDriveX = 1;
         }
 		
 		if(driverGamepad.getButtonHeld(XboxController.START_BUTTON) && (driverGamepad.getButtonHeld(XboxController.RIGHT_BUMPER) || driverGamepad.getRightTriggerPressed() )) {
@@ -253,6 +250,13 @@ public class Robot extends IterativeRobot {
 				robotIntake._elevatorMotor.set(driverGamepad.getRightY());
 				robotIntake.manualElevator = true;
 			}
+		} else if(driverGamepad.getLeftTriggerPressed()){
+				robotIntake.compressor.stop();
+				if(Math.abs(driverGamepad.getRightY())>0.2 ) {
+					robotIntake.elevatorFast();
+					robotIntake._elevatorMotor.set(driverGamepad.getRightY());
+					robotIntake.manualElevator = true;
+				}
 			
 		/***************************
 		 * Operator Controls
@@ -288,7 +292,7 @@ public class Robot extends IterativeRobot {
 			wristSet = true;
 			robotIntake._wristMotor.selectProfileSlot(0,0);
 			System.out.println("Hold at: " + robotIntake.getWristPosition());
-			robotIntake._wristMotor.set(ControlMode.MotionMagic, robotIntake.getElevatorPosition());
+			robotIntake._wristMotor.set(ControlMode.MotionMagic, robotIntake.getWristPosition());
 		}
 		
 
@@ -351,23 +355,25 @@ public class Robot extends IterativeRobot {
 		
 		
 		if(operatorGamepad.getLeftTriggerPressed() && operatorGamepad.getButtonHeld(XboxController.START_BUTTON)){
-			robotIntake._intakeMotor.set(Math.pow(operatorGamepad.getLeftTrigger(),2));
+			robotIntake.spinIntake(Math.pow(operatorGamepad.getLeftTrigger(),2)*660);
         }else if(operatorGamepad.getLeftTriggerPressed()){
         	if(armPos < Constants.ARM_DOWN_THRESHOLD) {
         		robotIntake.wristSlightDown();
         		wristSet = true;
         		robotIntake.needsWristUp = true;
         		if(robotIntake.getWristPosition() < -350) {
-        			robotIntake._intakeMotor.set(0.7);
+        			robotIntake.spinIntake(500);
         		}
+        	}else if (armPos > Constants.ARM_UP_THRESHOLD && robotIntake.getWristPosition() < Constants.WRIST_UP_SHOT_THRESHOLD) {
+        		robotIntake.spinIntake(1000);
         	}else {
-        		robotIntake._intakeMotor.set(0.35);
+        		robotIntake.spinIntake(operatorGamepad.getLeftTrigger()*175);
         	}
         }else if(operatorGamepad.getRightTriggerPressed()) {
-        	robotIntake._intakeMotor.set(-1*operatorGamepad.getRightTrigger());
+        	robotIntake.spinIntake(-1*operatorGamepad.getRightTrigger()*800);
         }else {
         	if(!robotIntake.gripSpin) {
-        		robotIntake._intakeMotor.set(0);
+        		robotIntake.spinIntake(0);
         	}
         }
 	   
@@ -375,9 +381,17 @@ public class Robot extends IterativeRobot {
 			if(elevatorPos < Constants.ELEVATOR_DOWN_THRESHOLD && armPos < Constants.ARM_DOWN_THRESHOLD) {
 				gripState = GripState.LIGHT;
 			}
-			robotIntake.wristDown();
-			robotIntake.needsWristUp = true;
+			if(armPos < Constants.ARM_DOWN_THRESHOLD) {
+				robotIntake.wristDown();
+				robotIntake.needsWristUp = true;
+			}else if(armPos > Constants.ARM_UP_THRESHOLD) {
+				robotIntake.wristUpShot();
+				robotIntake.needsWristUp = false;
+			}
 			wristSet = true;
+			robotIntake.wristOut = true;
+		}else {
+			robotIntake.wristOut = false;
 		}
 		
 		if (operatorGamepad.getButtonHeld(XboxController.LEFT_BUMPER)) {
@@ -461,6 +475,14 @@ public class Robot extends IterativeRobot {
 			wristOverride = wristOverrideNew;
 		}
 		
+		if(armPos > Constants.ARM_UP_THRESHOLD) {
+			robotIntake._wristMotor.configReverseSoftLimitThreshold(Constants.WRIST_THRESHOLD_UP_REVERSE, Constants.kTimeoutMs);
+			robotIntake._wristMotor.configForwardSoftLimitThreshold(Constants.WRIST_THRESHOLD_UP_FORWARD, Constants.kTimeoutMs);
+		} else {
+			robotIntake._wristMotor.configReverseSoftLimitThreshold(Constants.WRIST_THRESHOLD_DOWN_REVERSE, Constants.kTimeoutMs);
+			robotIntake._wristMotor.configForwardSoftLimitThreshold(Constants.WRIST_THRESHOLD_DOWN_FORWARD, Constants.kTimeoutMs);
+		}
+		
     }
     
    
@@ -523,8 +545,8 @@ public class Robot extends IterativeRobot {
 	    		robotIntake._elevatorMotor.set(0);
 	    		robotIntake._elevatorSlave1.set(0);
 	    		robotIntake._armMotor.set(0);
-	    		robotIntake._intakeMotor.set(0);
-	    		robotIntake._intakeSlave1.set(0);
+	    		robotIntake._intakeLeftMotor.set(0);
+	    		robotIntake._intakeRightMotor.set(0);
 	    		robotIntake._wristMotor.set(0);
 	    		motorCurrentSum = 0;
 	    		motorCurrentCount = 0;
@@ -739,35 +761,35 @@ public class Robot extends IterativeRobot {
 	    		break;
 	    		
 	    	case 13: //Intake Motor
-	    		motorEncoder = robotIntake._intakeMotor.getSelectedSensorPosition(0);
+	    		motorEncoder = robotIntake._intakeLeftMotor.getSelectedSensorPosition(0);
 	    		if(Math.abs(motorEncoder) > 40000) {
-	    			robotIntake._intakeMotor.setSelectedSensorPosition(0, 0, 10);
+	    			robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, 10);
 	    	    	motorDirection *= -1;
 	    	    	System.out.println("Reached 40000 ticks, switching direction");
 	    		}
 	    		if(motorCurrentCount==0) {
-		    		System.out.println("Powering intake motor. [Desc: " + robotIntake._intakeMotor.getDescription() + ", Name: " +robotIntake._intakeMotor.getName() + " ID: " +robotIntake._intakeMotor.getDeviceID());	    		
-		    		System.out.println("Voltage: " + robotIntake._intakeMotor.getBusVoltage());	
+		    		System.out.println("Powering intake motor. [Desc: " + robotIntake._intakeLeftMotor.getDescription() + ", Name: " +robotIntake._intakeLeftMotor.getName() + " ID: " +robotIntake._intakeLeftMotor.getDeviceID());	    		
+		    		System.out.println("Voltage: " + robotIntake._intakeLeftMotor.getBusVoltage());	
 	    		}
-	    		robotIntake._intakeMotor.set(motorDirection*.5); 
+	    		robotIntake._intakeLeftMotor.set(motorDirection*.5); 
 	    		motorCurrentCount++;
-	    		motorCurrentSum += robotIntake._intakeMotor.getOutputCurrent();
+	    		motorCurrentSum += robotIntake._intakeLeftMotor.getOutputCurrent();
 	    		break;
 	    		
 	    	case 14: //Intake Slave 1
-	    		motorEncoder = robotIntake._intakeMotor.getSelectedSensorPosition(0);
+	    		motorEncoder = robotIntake._intakeRightMotor.getSelectedSensorPosition(0);
 	    		if(Math.abs(motorEncoder) > 40000) {
-	    			robotIntake._intakeMotor.setSelectedSensorPosition(0, 0, 10);
+	    			robotIntake._intakeRightMotor.setSelectedSensorPosition(0, 0, 10);
 	    	    	motorDirection *= -1;
 	    	    	System.out.println("Reached 40000 ticks, switching direction");
 	    		}
 	    		if(motorCurrentCount==0) {
-		    		System.out.println("Powering intake slave 1. [Desc: " + robotIntake._intakeSlave1.getDescription() + ", Name: " +robotIntake._intakeSlave1.getName() + " ID: " +robotIntake._intakeSlave1.getDeviceID());	    		
-		    		System.out.println("Voltage: " + robotIntake._intakeSlave1.getBusVoltage());	
+		    		System.out.println("Powering intake slave 1. [Desc: " + robotIntake._intakeRightMotor.getDescription() + ", Name: " +robotIntake._intakeRightMotor.getName() + " ID: " +robotIntake._intakeRightMotor.getDeviceID());	    		
+		    		System.out.println("Voltage: " + robotIntake._intakeRightMotor.getBusVoltage());	
 	    		}
-	    		robotIntake._intakeSlave1.set(motorDirection*.5); 
+	    		robotIntake._intakeRightMotor.set(motorDirection*.5); 
 	    		motorCurrentCount++;
-	    		motorCurrentSum += robotIntake._intakeSlave1.getOutputCurrent();
+	    		motorCurrentSum += robotIntake._intakeRightMotor.getOutputCurrent();
 	    		break;
 	    	case 15:
 	    		//open, wait 1s, close firm, wait 1s, close light, wait 1s, repeat
