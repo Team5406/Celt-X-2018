@@ -70,6 +70,16 @@ class AutoRunnable implements java.lang.Runnable
     
     public boolean IsDrivePathDone() { return drivePathDone; }
     
+    public void AlterPath(ArrayList<double[]> _motionProfile, boolean _isBackwards)
+    {
+    	isBackwards = _isBackwards;
+    	
+    	motionProfile = _motionProfile;
+    	lastPoint = 0;
+    	
+    	drivePathDone = false;
+    }
+    
     public double calcSpeed(double currentError){
 		
  		double valP = Constants.GYRO_PID_P * currentError;

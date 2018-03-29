@@ -21,6 +21,11 @@ public class AutoNotifier extends Notifier{
 	
 	public boolean IsDrivePathDone() { return runner.IsDrivePathDone(); }
 	
+	public void AlterPath(ArrayList<double[]> _motionProfile, boolean _isBackwards)
+	{
+		runner.AlterPath(_motionProfile, _isBackwards);
+	}
+	
 	public static AutoNotifier CreateAutoNotifier(Drive _robotDrive, ArrayList<double[]> drivePath, boolean _isBackwards)
 	{
 		AutoRunnable _runner = new AutoRunnable(_robotDrive, drivePath, _isBackwards);
