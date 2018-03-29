@@ -15,4 +15,16 @@
 		<nature>org.eclipse.jdt.core.javanature</nature>
 		<nature>edu.wpi.first.wpilib.plugins.core.nature.FRCProjectNature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>Downloads</name>
+			<type>2</type>
+			<location>C:/Users/Celt-X 2/Downloads</location>
+		</link>
+		<link>
+			<name>New folder</name>
+			<type>2</type>
+			<location>C:/Users/Celt-X 2/Downloads/New folder</location>
+		</link>
+	</linkedResources>
 </projectDescription>

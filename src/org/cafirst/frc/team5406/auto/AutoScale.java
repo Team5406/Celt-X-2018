@@ -67,7 +67,7 @@ public class AutoScale  extends AutonomousRoutine{
     	private double accumI = 0.0;
     	public double lastAngle = 0;
     	private double previousError = 0.0;
-    	
+    	private boolean isBackwards = false;
     	
     	
 	    public void run() {
@@ -218,8 +218,9 @@ public class AutoScale  extends AutonomousRoutine{
 				  left.add(new Point2D.Double(0, 170));
 				  left.add(new Point2D.Double(-35, 265));
 			  } else {
-				 // left.add(new Point2D.Double(0, 154));
-				  //left.add(new Point2D.Double(0, 225));
+				  left.add(new Point2D.Double(0, 170));
+				  left.add(new Point2D.Double(-160, 175));
+				  left.add(new Point2D.Double(-170, 225));
 			  }
 			  
 			  motionProfiler.bezierPoints(left, 0, 0);
@@ -237,7 +238,7 @@ public class AutoScale  extends AutonomousRoutine{
 			robotIntake.elevatorDown();
 			robotIntake.armUp();
 			flipWrist =3;
-			robotIntake.wristOut = true;
+			robotIntake.wristOut = false;
 			_notifier.startPeriodic(0.005);
 			robotIntake.needsWristUp = false;
 			autoStep++;
@@ -245,13 +246,13 @@ public class AutoScale  extends AutonomousRoutine{
 	   	case 4:
 	   		if(robotIntake.getArmPosition() > Constants.ARM_UP - 100) {
 	   			_notifier.stop();
-	   			robotIntake._wristMotor.set(ControlMode.MotionMagic, Constants.WRIST_UP_SHOT);
+	   			robotIntake._wristMotor.set(ControlMode.MotionMagic, -2400);
 	   			autoStep++;
 	   		}
 	   		break;
 	   	case 5:
 	   		if(drivePathDone) {
-	   			robotIntake.spinIntake(660);
+	   			robotIntake.spinIntake(175);
     		}
 	   		break;
 	   	}
