@@ -56,8 +56,8 @@ class AutoRunnable implements java.lang.Runnable
 		    		targetSpeedRight = motionProfile.get(lastPoint)[4]*(4096/600)*Constants.driveGearRatio;
 					rightSpeed = targetSpeedRight-Math.signum(targetSpeedRight)*targetSpeedRight*speedChangeMultiplier; //400-1200 = -800
 					System.out.println("LS: "+ leftSpeed + ", LT: " + targetSpeedLeft + ", LA:" + robotDrive._frontLeftMotor.getSelectedSensorVelocity(0) + ", RS: "+ rightSpeed + ", RT: " + targetSpeedRight + ", RA:" + robotDrive._frontRightMotor.getSelectedSensorVelocity(0));
-		    		robotDrive._frontRightMotor.set(ControlMode.Velocity,-1*(isBackwards ? leftSpeed : rightSpeed));
-		    		robotDrive._frontLeftMotor.set(ControlMode.Velocity, -1*(isBackwards ? rightSpeed : leftSpeed));
+		    		robotDrive._frontRightMotor.set(ControlMode.Velocity,(isBackwards ? -1*leftSpeed : rightSpeed));
+		    		robotDrive._frontLeftMotor.set(ControlMode.Velocity, (isBackwards ? -1*rightSpeed : leftSpeed));
 		    		lastPoint++;
 	    		}else {
 	    			robotDrive._frontLeftMotor.set(ControlMode.Velocity,0);
