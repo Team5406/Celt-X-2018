@@ -81,6 +81,8 @@ public final class Constants {
 
 	public static int kTimeoutMs = 15;
 	
+	public static double AutoStartTime = 0;
+	
 	public boolean equalsDeadband(double value){
 	return ((-1*xboxControllerDeadband) < value && value < xboxControllerDeadband);
 	}

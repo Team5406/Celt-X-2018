@@ -28,7 +28,6 @@ public class AutoScale  extends AutonomousRoutine{
 	private int direction = 1;
 	MotionProfile motionProfiler = new MotionProfile();
 	int wristUpDelay = 0;
-	boolean drivePathDone = false;
         double startTime = 0;
         int lastPoint = 0;
         double targetTime = 0;
@@ -62,72 +61,8 @@ public class AutoScale  extends AutonomousRoutine{
     	}
     	Notifier _notifier = new Notifier(new PeriodicRunnable());
     		
-        class AutoRunnable implements java.lang.Runnable {
-    	private double targetAngle;
-    	private double accumI = 0.0;
-    	public double lastAngle = 0;
-    	private double previousError = 0.0;
-    	private boolean isBackwards = false;
-    	
-    	
-	    public void run() {
-	    	
-	    	double leftSpeed = 0;
-			double rightSpeed = 0;
-			double dSpeed = 0;
-			double speedChangeMultiplier = 0;
-			double targetSpeedLeft = 0;
-			double targetSpeedRight = 0;
-			double currentAngle = Constants.navX.getYaw();
-
-		    
-	    	
-	    	if(!drivePathDone) {
-	    		double elapsedTime = Timer.getFPGATimestamp() - startTime; 	
-	    		System.out.println("eTime: " + elapsedTime + "tTime: " + targetTime + "Cur:" +  currentAngle + "Tar:"+ motionProfiler.motionProfile.get(lastPoint)[5]);
-				speedChangeMultiplier = calcSpeed(motionProfiler.motionProfile.get(lastPoint)[5] - currentAngle);
-		    	int numPoints = motionProfiler.motionProfile.size();
-		    	if (elapsedTime > targetTime) {
-		    		if(lastPoint < numPoints -2) {
-		    			System.out.println(lastPoint + " ("+ (numPoints-2) + "), "+ motionProfiler.motionProfile.get(lastPoint)[0]/1000 + + motionProfiler.motionProfile.get(lastPoint)[2] + ", " + motionProfiler.motionProfile.get(lastPoint)[1]);
-			    		targetTime += motionProfiler.motionProfile.get(lastPoint)[0]/1000;
-			    		targetSpeedLeft = motionProfiler.motionProfile.get(lastPoint)[2]*(4096/600)*Constants.driveGearRatio;
-						leftSpeed =targetSpeedLeft+Math.signum(targetSpeedLeft)*targetSpeedLeft*speedChangeMultiplier; //-1*400-1200 = -1800
-			    		targetSpeedRight = motionProfiler.motionProfile.get(lastPoint)[4]*(4096/600)*Constants.driveGearRatio;
-						rightSpeed = targetSpeedRight-Math.signum(targetSpeedRight)*targetSpeedRight*speedChangeMultiplier; //400-1200 = -800
-						System.out.println("LS: "+ leftSpeed + ", LT: " + targetSpeedLeft + ", LA:" + robotDrive._frontLeftMotor.getSelectedSensorVelocity(0) + ", RS: "+ rightSpeed + ", RT: " + targetSpeedRight + ", RA:" + robotDrive._frontRightMotor.getSelectedSensorVelocity(0));
-			    		robotDrive._frontRightMotor.set(ControlMode.Velocity,-1*leftSpeed);
-			    		robotDrive._frontLeftMotor.set(ControlMode.Velocity, -1*rightSpeed);
-			    		lastPoint++;
-		    		}else {
-		    			robotDrive._frontLeftMotor.set(ControlMode.Velocity,0);
-		    			robotDrive._frontRightMotor.set(ControlMode.Velocity,0);
-		    			drivePathDone = true;
-		    		}
-		    	}
-	    	}
-
-	    }
-	    
-	    public double calcSpeed(double currentError){
-			
-	 		double valP = Constants.GYRO_PID_P * currentError;
-	 		double valI = accumI;
-	 		double valD = Constants.GYRO_PID_D * (previousError - currentError);
-	 		if(Math.abs(valD) > Math.abs(valP)) valD = valP; // Limit so that D isn't the driving number
-	 		accumI += Constants.GYRO_PID_I;
-	 		
-	 		//If we overshoot, reset the I
-	 		if(Math.signum(previousError) != Math.signum(currentError)){ 
-	 			accumI = 0; 
-	 			valI = 0;
-	 		}
-	 		double speed = valP + (valI * (currentError > 0 ? 1.0 : -1.0)) - valD;
-	 		previousError = currentError;
-	 		return speed;
-	 	}
-	}
-	Notifier _autoLoop = new Notifier(new AutoRunnable());
+        
+	AutoNotifier _autoLoop;
 
 	public AutoScale(Drive _robotDrive, Intake _robotIntake){
 		super("3 - Scale Auto Right");
@@ -142,14 +77,14 @@ public class AutoScale  extends AutonomousRoutine{
 
     	robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
     	robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-    	startTime = Timer.getFPGATimestamp();
+    	Constants.AutoStartTime = Timer.getFPGATimestamp();
          lastPoint = 0;
         targetTime = 0;
         motionProfiler.motionProfile = new ArrayList<double[]>();
- 		drivePathDone = false;
          autoStep = 1;
          Constants.navX.zeroYaw();
          wristUpDelay = 0;
+         _autoLoop = AutoNotifier.CreateAutoNotifier(robotDrive, motionProfiler.motionProfile, false);
 	}
 	
 	public void end(){
@@ -251,7 +186,7 @@ public class AutoScale  extends AutonomousRoutine{
 	   		}
 	   		break;
 	   	case 5:
-	   		if(drivePathDone) {
+	   		if(_autoLoop.IsDrivePathDone()) {
 	   			robotIntake.spinIntake(175);
     		}
 	   		break;
