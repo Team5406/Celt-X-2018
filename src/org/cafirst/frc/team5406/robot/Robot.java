@@ -370,7 +370,7 @@ public class Robot extends IterativeRobot {
         		robotIntake.spinIntake(operatorGamepad.getLeftTrigger()*175);
         	}
         }else if(operatorGamepad.getRightTriggerPressed()) {
-        	robotIntake.spinIntake(-1*operatorGamepad.getRightTrigger()*800);
+        	robotIntake.spinIntake(-1*operatorGamepad.getRightTrigger()*1000);
         }else {
         	if(!robotIntake.gripSpin) {
         		robotIntake.spinIntake(0);

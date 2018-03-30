@@ -147,7 +147,7 @@ public class AutoScale  extends AutonomousRoutine{
         targetTime = 0;
         motionProfiler.motionProfile = new ArrayList<double[]>();
  		drivePathDone = false;
-         autoStep = 1;
+         autoStep = 0;
          Constants.navX.zeroYaw();
          wristUpDelay = 0;
 	}
@@ -218,42 +218,59 @@ public class AutoScale  extends AutonomousRoutine{
 				  left.add(new Point2D.Double(0, 170));
 				  left.add(new Point2D.Double(-35, 265));
 			  } else {
-				 // left.add(new Point2D.Double(0, 154));
-				  //left.add(new Point2D.Double(0, 225));
+				  left.add(new Point2D.Double(-10, 190));
+				  left.add(new Point2D.Double(-180, 200));
+				  left.add(new Point2D.Double(-210, 255));
 			  }
 			  
-			  motionProfiler.bezierPoints(left, 0, 0);
+			  motionProfiler.bezierPoints(left, 0, 20);
 				
 			  _autoLoop.startPeriodic(0.005);
 			  autoStep++;
            }
            break;
 	   	case 2:
-	   			robotIntake.armUp();
+	   			//robotIntake.armUp();
 		   		autoStep++;
 	   		break;
 	   	case 3:
-	   		robotIntake.elevatorFast();
-			robotIntake.elevatorDown();
+	   		if(drivePathDone) {
+			//robotIntake.wristUp();
 			robotIntake.armUp();
+			robotIntake.elevatorFast();
+			robotIntake.elevatorSwitchMid();
 			flipWrist =3;
-			robotIntake.wristOut = true;
+			robotIntake.wristOut = false;
 			_notifier.startPeriodic(0.005);
-			robotIntake.needsWristUp = false;
+			robotIntake.needsWristUp = false;	
 			autoStep++;
 	   		break;
+	   		}
 	   	case 4:
-	   		if(robotIntake.getArmPosition() > Constants.ARM_UP - 100) {
+	   		if(robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
 	   			_notifier.stop();
-	   			robotIntake._wristMotor.set(ControlMode.MotionMagic, Constants.WRIST_UP_SHOT);
+	   			robotIntake._wristMotor.set(ControlMode.MotionMagic, -2400);
 	   			autoStep++;
 	   		}
 	   		break;
 	   	case 5:
-	   		if(drivePathDone) {
-	   			robotIntake.spinIntake(660);
-    		}
+	   		robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+	    	robotIntake._intakeRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+	   		robotIntake.spinIntake(175);
+	   		autoStep++;
 	   		break;
+	   	case 6:
+	   		if(robotIntake._intakeLeftMotor.getSelectedSensorPosition(0) + robotIntake._intakeRightMotor.getSelectedSensorPosition(0)> 6000) {
+	   			robotIntake.spinIntake(175);
+	   			robotIntake.armDown();
+				robotIntake.elevatorFast();
+				robotIntake.elevatorDown();
+				//wristDown();
+				flipWrist =1;
+				_notifier.startPeriodic(0.005);
+	   		}
+	   		
 	   	}
+		
 	}
 }
