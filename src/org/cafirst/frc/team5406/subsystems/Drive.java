@@ -56,7 +56,7 @@ public class Drive extends Subsystems{
 	    	_frontLeftMotor.config_kI(0, 0.0001, Constants.kTimeoutMs);
 	    	_frontLeftMotor.config_kD(0, 0.001, Constants.kTimeoutMs);
 	    	_frontRightMotor.selectProfileSlot(0,0);
-	    	_frontRightMotor.config_kF(0, .090, Constants.kTimeoutMs);
+	    	_frontRightMotor.config_kF(0, .09, Constants.kTimeoutMs);
 	    	_frontRightMotor.config_kP(0, 0.2, Constants.kTimeoutMs);
 	    	_frontRightMotor.config_kI(0, 0.0001, Constants.kTimeoutMs);
 	    	_frontRightMotor.config_kD(0, 0.001, Constants.kTimeoutMs);

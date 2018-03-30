@@ -37,7 +37,7 @@ public final class Constants {
 	public static double[] PROFILE_DOWN_OUT_WRIST = {-3000, -1530, -1970, -2220};
 	
 
-	public static double GYRO_PID_P = 0.05;
+	public static double GYRO_PID_P = 0.02;
 	public static double GYRO_PID_I = 0.000;
 	public static double GYRO_PID_D = 0.125;
 	public static double WHEEL_BASE = 35.5;
@@ -56,8 +56,8 @@ public final class Constants {
 	
 	public static double xboxControllerDeadband = 0.2;
 	
-	public static double revPerInch = 0.06;
-	public static double maxSpeed = 6 * 12 * revPerInch * 60;
+	public static double revPerInch = 0.063;
+	public static double maxSpeed = 10 * 12 * revPerInch * 60;
 	public static double minSpeed = 2 * 12 * revPerInch * 60;
 	public static double driveGearRatio = 4.125; //66/16
 	
