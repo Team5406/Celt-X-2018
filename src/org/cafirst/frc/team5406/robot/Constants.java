@@ -13,7 +13,9 @@ public final class Constants {
 	public static int ELEVATOR_DOWN = 1000;
 	public static int WRIST_UP = 0;
 	public static int WRIST_DOWN = -2950;
+	public static int WRIST_DOWN_MORE = -3100;
 	public static int WRIST_PUNT = -475;
+	public static int WRIST_PUNT_MORE = -550;
 	public static int WRIST_EXCHANGE = -2650;
 	public static int WRIST_UP_SHOT = -4100;
 	public static int ARM_DOWN_THRESHOLD = 500;

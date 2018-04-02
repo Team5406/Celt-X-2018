@@ -24,6 +24,10 @@ public class AutoSwitchFront  extends AutonomousRoutine{
 	private boolean gearDelay = false;
 	private double[] robotPosition;
 	private int direction = 1;
+    String gameData;
+	ArrayList<Point2D> left = new ArrayList<Point2D>();
+
+	boolean driveBackwards = false;
 	MotionProfile motionProfiler = new MotionProfile();
 	int wristUpDelay = 0;
 	boolean drivePathDone = false;
@@ -36,12 +40,12 @@ public class AutoSwitchFront  extends AutonomousRoutine{
     	private double accumI = 0.0;
     	public double lastAngle = 0;
     	private double previousError = 0.0;
+    	boolean droveLast = false;
     	
     	
-    	
-	    public void run() {
-	    	
-	    	double leftSpeed = 0;
+		public void run() {
+
+			double leftSpeed = 0;
 			double rightSpeed = 0;
 			double dSpeed = 0;
 			double speedChangeMultiplier = 0;
@@ -49,34 +53,101 @@ public class AutoSwitchFront  extends AutonomousRoutine{
 			double targetSpeedRight = 0;
 			double currentAngle = Constants.navX.getYaw();
 
-		    
-	    	
-	    	if(!drivePathDone) {
-	    		System.out.println("Cur:" +  currentAngle + "Tar:"+ motionProfiler.motionProfile.get(lastPoint)[5]);
+			if (!drivePathDone) {
+				double elapsedTime = Timer.getFPGATimestamp() - startTime;
+				/*System.out.println("eTime: " + elapsedTime + "tTime: " + targetTime + "Cur:" + currentAngle + "Tar:"
+						+ motionProfiler.motionProfile.get(lastPoint)[5]);*/
 				speedChangeMultiplier = calcSpeed(motionProfiler.motionProfile.get(lastPoint)[5] - currentAngle);
-	    		double elapsedTime = Timer.getFPGATimestamp() - startTime; 	
-		    	int numPoints = motionProfiler.motionProfile.size();
-		    	if (elapsedTime > targetTime) {
-		    		if(lastPoint < numPoints -2) {
-		    			//System.out.println(lastPoint + ", " + motionProfile.get(lastPoint)[2]/1000 + ", " + motionProfile.get(lastPoint)[1]/1000);
-			    		targetTime += motionProfiler.motionProfile.get(lastPoint)[0]/1000;
-			    		targetSpeedLeft = motionProfiler.motionProfile.get(lastPoint)[2]*(4096/600)*Constants.driveGearRatio;
-						leftSpeed =targetSpeedLeft+Math.signum(targetSpeedLeft)*targetSpeedLeft*speedChangeMultiplier; //-1*400-1200 = -1800
-			    		targetSpeedRight = motionProfiler.motionProfile.get(lastPoint)[4]*(4096/600)*Constants.driveGearRatio;
-						rightSpeed = targetSpeedRight-Math.signum(targetSpeedRight)*targetSpeedRight*speedChangeMultiplier; //400-1200 = -800
-						System.out.println("LS: "+ leftSpeed + ", LT: " + targetSpeedLeft + ", LA:" + robotDrive._frontLeftMotor.getSelectedSensorVelocity(0) + ", RS: "+ rightSpeed + ", RT: " + targetSpeedRight + ", RA:" + robotDrive._frontRightMotor.getSelectedSensorVelocity(0));
-			    		robotDrive._frontRightMotor.set(ControlMode.Velocity,rightSpeed);
-			    		robotDrive._frontLeftMotor.set(ControlMode.Velocity, leftSpeed);
-			    		lastPoint++;
-		    		}else {
-		    			robotDrive._frontLeftMotor.set(ControlMode.Velocity,0);
-		    			robotDrive._frontRightMotor.set(ControlMode.Velocity,0);
-		    			drivePathDone = true;
-		    		}
-		    	}
-	    	}
+				int numPoints = motionProfiler.motionProfile.size();
+				if (elapsedTime > targetTime || droveLast) {
+					if (lastPoint < numPoints - 2) {
 
-	    }
+						if (elapsedTime > targetTime + motionProfiler.motionProfile.get(lastPoint)[0] / 1000) {
+							targetSpeedLeft = 0;
+							targetSpeedRight = 0;
+							double profilesSkipped = 0;
+
+							while (elapsedTime > targetTime + motionProfiler.motionProfile.get(lastPoint)[0] / 1000) {
+								profilesSkipped += motionProfiler.motionProfile.get(lastPoint)[0] / 1000;
+								targetTime += motionProfiler.motionProfile.get(lastPoint)[0] / 1000;
+
+								targetSpeedLeft += (motionProfiler.motionProfile.get(lastPoint)[0] / 1000)
+										* motionProfiler.motionProfile.get(lastPoint)[2] * (4096 / 600)
+										* Constants.driveGearRatio;
+								targetSpeedRight += (motionProfiler.motionProfile.get(lastPoint)[0] / 1000)
+										* motionProfiler.motionProfile.get(lastPoint)[4] * (4096 / 600)
+										* Constants.driveGearRatio;
+								lastPoint++;
+							}
+
+							double leftOverTime = elapsedTime - targetTime;
+							profilesSkipped += leftOverTime;
+
+							targetSpeedLeft += leftOverTime * motionProfiler.motionProfile.get(lastPoint)[2]
+									* (4096 / 600) * Constants.driveGearRatio;
+							targetSpeedLeft /= profilesSkipped;
+							leftSpeed = targetSpeedLeft
+									+ Math.signum(targetSpeedLeft) * targetSpeedLeft * speedChangeMultiplier; // -1*400-1200
+																												// =
+																												// -1800
+							targetSpeedRight += leftOverTime * motionProfiler.motionProfile.get(lastPoint)[4]
+									* (4096 / 600) * Constants.driveGearRatio;
+							targetSpeedRight /= profilesSkipped;
+							rightSpeed = targetSpeedRight
+									- Math.signum(targetSpeedRight) * targetSpeedRight * speedChangeMultiplier; // 400-1200
+																												// =
+																												// -800
+
+							droveLast = true;
+
+							/*System.out.println(lastPoint + " (" + (numPoints - 2) + "), "
+									+ motionProfiler.motionProfile.get(lastPoint)[0] / 1000
+									+ +motionProfiler.motionProfile.get(lastPoint)[2] + ", "
+									+ motionProfiler.motionProfile.get(lastPoint)[1]);*/
+						} else {
+							droveLast = false;
+							targetTime += motionProfiler.motionProfile.get(lastPoint)[0] / 1000;
+							targetSpeedLeft = motionProfiler.motionProfile.get(lastPoint)[2] * (4096 / 600)
+									* Constants.driveGearRatio;
+							leftSpeed = targetSpeedLeft
+									+ Math.signum(targetSpeedLeft) * targetSpeedLeft * speedChangeMultiplier; // -1*400-1200
+																												// =
+																												// -1800
+							targetSpeedRight = motionProfiler.motionProfile.get(lastPoint)[4] * (4096 / 600)
+									* Constants.driveGearRatio;
+							rightSpeed = targetSpeedRight
+									- Math.signum(targetSpeedRight) * targetSpeedRight * speedChangeMultiplier; // 400-1200
+																												// =
+																												// -800
+
+							/*System.out.println("LS: " + leftSpeed + ", LT: " + targetSpeedLeft + ", LA:"
+									+ robotDrive._frontLeftMotor.getSelectedSensorVelocity(0) + ", RS: " + rightSpeed
+									+ ", RT: " + targetSpeedRight + ", RA:"
+									+ robotDrive._frontRightMotor.getSelectedSensorVelocity(0));*/
+							lastPoint++;
+						}
+						
+						if(driveBackwards) {
+							robotDrive._frontRightMotor.set(ControlMode.Velocity, -1 * leftSpeed);
+							robotDrive._frontLeftMotor.set(ControlMode.Velocity, -1 * rightSpeed);
+						}else {
+							robotDrive._frontRightMotor.set(ControlMode.Velocity, rightSpeed);
+							robotDrive._frontLeftMotor.set(ControlMode.Velocity, leftSpeed);
+						}
+							
+							
+					} else {
+						robotDrive._frontLeftMotor.set(ControlMode.Velocity, 0);
+						robotDrive._frontRightMotor.set(ControlMode.Velocity, 0);
+						drivePathDone = true;
+
+						System.out.println("DELTA TIME: " + elapsedTime);
+					}
+				}
+			}
+
+		}
+    	
 	    
 	    public double calcSpeed(double currentError){
 			
@@ -126,6 +197,7 @@ public class AutoSwitchFront  extends AutonomousRoutine{
 	}
 
 	public void periodic(){
+//		System.out.println(autoStep);
 		switch(autoStep) {
 	   	case 0:
 
@@ -175,44 +247,192 @@ public class AutoSwitchFront  extends AutonomousRoutine{
 			}
 			break;
 	   	case 1:
-	   	   String gameData;
 	   	   gameData = DriverStation.getInstance().getGameSpecificMessage();
            if(gameData.length() > 0)
            {
+        	   
         	   ArrayList<Point2D> left = new ArrayList<Point2D>();
         	   left.add(new Point2D.Double(0, 0));
 				
 			  if(gameData.charAt(0) == 'L')
 			  {
-				  left.add(new Point2D.Double(-55, 109));
-				  motionProfiler.bezierPoints(left, 0, 5);
+				  left.add(new Point2D.Double(-80, 129));
+				  motionProfiler.bezierPoints(left, 0, 5, 9, 1);
 			  } else {
-				  left.add(new Point2D.Double(40, 108));
-				  motionProfiler.bezierPoints(left, 0, 355);
+				  left.add(new Point2D.Double(40, 128));
+				  motionProfiler.bezierPoints(left, 0, -5, 9, 1);
 			  }
-				
+			  driveBackwards = false;
 			  _autoLoop.startPeriodic(0.005);
 			  autoStep++;
            }
            break;
 	   	case 2:
 	   		if(drivePathDone) {
-	   			autoStep++;
+	   			 _autoLoop.stop();
+	   			 autoStep++;
 	   		}
 	   		break;
 	   	case 3:
-	   		robotIntake.wristSlightDown();
-   	   		robotIntake.needsWristUp = true;
-   	   		if(robotIntake._wristMotor.getSelectedSensorPosition(0) < -350) {
-   	   		robotIntake.spinIntake(350);
-   	   		}
+			robotIntake.wristPuntMore();
+			robotIntake.needsWristUp = true;
+			if (robotIntake._wristMotor.getSelectedSensorPosition(0) < -350) {
+				robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+				robotIntake._intakeRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+				robotIntake.spinIntake(500);
+				autoStep++;
+			}
 	   		break;
 	   	case 4:
-	   		wristUpDelay++;
-	   		if(wristUpDelay > 200) {
+	   		if(robotIntake._intakeLeftMotor.getSelectedSensorPosition(0) + robotIntake._intakeRightMotor.getSelectedSensorPosition(0)> 50000) {
 	   			robotIntake.spinIntake(0);
 	   			robotIntake.wristUp();
+	   			autoStep++;
 	   		}
+	   		break;
+	   	case 5:
+ 	        
+	    	robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+	    	robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+	    	startTime = Timer.getFPGATimestamp();
+	         lastPoint = 0;
+	        targetTime = 0;
+	 		drivePathDone = false;
+
+		   left = new ArrayList<Point2D>();
+    	   left.add(new Point2D.Double(0, 0));
+			
+			  if(gameData.charAt(0) == 'L')
+			  {
+				  left.add(new Point2D.Double(-35, 119));
+				  motionProfiler.bezierPoints(left, 5, 0, 9, 1);
+			  } else {
+				  left.add(new Point2D.Double(75, 118));
+				  motionProfiler.bezierPoints(left, -5, 0, 9, 1);
+			  }
+		  
+		  driveBackwards = true;
+		  _autoLoop.startPeriodic(0.005);
+		  autoStep++;
+		  break;
+		  
+	   	case 6:
+			if (drivePathDone) {
+				  _autoLoop.stop();
+				robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+				robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+				startTime = Timer.getFPGATimestamp();
+				lastPoint = 0;
+				targetTime = 0;
+				motionProfiler.motionProfile = new ArrayList<double[]>();
+				drivePathDone = false;
+
+				left = new ArrayList<Point2D>();
+				left.add(new Point2D.Double(0, 0));
+
+				if (gameData.charAt(0) == 'L') {
+					left.add(new Point2D.Double(0, 65));
+					motionProfiler.bezierPoints(left, 0, 0, 9, 1);
+				} else {
+					left.add(new Point2D.Double(0, 65));
+					motionProfiler.bezierPoints(left, 0, 0, 9, 1);
+				}
+
+				driveBackwards = false;
+				robotIntake.wristDownMore();
+				robotIntake.gripOpen();
+				robotIntake.spinIntake(-400);
+				_autoLoop.startPeriodic(0.005);
+				autoStep++;
+			}
+		  break;
+	   	case 7:
+	   		if(drivePathDone) {
+				  _autoLoop.stop();
+		   		robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+		    	robotIntake._intakeRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+	   			robotIntake.gripFirm();
+	   			autoStep++;
+	   			wristUpDelay=0;
+	   		}
+	   		break;
+	   	case 8:
+
+	   		wristUpDelay++;
+	   		if(wristUpDelay > 20) {
+	   			robotIntake.spinIntake(0);
+	   			robotIntake.wristUp();
+	    	robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+	    	robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+	    	startTime = Timer.getFPGATimestamp();
+	         lastPoint = 0;
+	        targetTime = 0;
+	        motionProfiler.motionProfile = new ArrayList<double[]>();
+	 		drivePathDone = false;
+
+		   left = new ArrayList<Point2D>();
+    	   left.add(new Point2D.Double(0, 0));
+			
+			  if(gameData.charAt(0) == 'L')
+			  {
+				  left.add(new Point2D.Double(0, 65));
+				  motionProfiler.bezierPoints(left, 0, 0, 9, 1);
+			  } else {
+				  left.add(new Point2D.Double(0, 65));
+				  motionProfiler.bezierPoints(left, 0, 0, 9, 1);
+			  }
+		  
+		  driveBackwards = true;
+		  _autoLoop.startPeriodic(0.005);
+		  autoStep++;
+	   		}
+		  break;
+	   	case 9:
+	   		if(drivePathDone) {
+	   			_autoLoop.stop();
+		    	robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+		    	robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+		    	startTime = Timer.getFPGATimestamp();
+		         lastPoint = 0;
+		        targetTime = 0;
+		        motionProfiler.motionProfile = new ArrayList<double[]>();
+		 		drivePathDone = false;
+
+	        	   ArrayList<Point2D> left = new ArrayList<Point2D>();
+	        	   left.add(new Point2D.Double(0, 0));
+					
+				  if(gameData.charAt(0) == 'L')
+				  {
+					  left.add(new Point2D.Double(-80, 121));
+					  motionProfiler.bezierPoints(left, 0, 5, 9, 1);
+				  } else {
+					  left.add(new Point2D.Double(44, 120));
+					  motionProfiler.bezierPoints(left, 0, -5, 9, 1);
+				  }
+				  driveBackwards = false;
+				  _autoLoop.startPeriodic(0.005);
+				  autoStep++;
+	   		}
+	           break;
+		   	case 10:
+		   		if(drivePathDone) {
+		   			robotIntake.wristPuntMore();
+	   	   		robotIntake.needsWristUp = true;
+	   	   		if(robotIntake._wristMotor.getSelectedSensorPosition(0) < -350) {
+			   		robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+			    	robotIntake._intakeRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+	   	   		robotIntake.spinIntake(500);
+	   	   		autoStep++;
+	   	   		}
+		   		}
+		   		break;
+		   	case 11:
+		   		if(robotIntake._intakeLeftMotor.getSelectedSensorPosition(0) + robotIntake._intakeRightMotor.getSelectedSensorPosition(0)> 50000) {
+		   			robotIntake.spinIntake(0);
+		   			robotIntake.wristUp();
+		   			autoStep++;
+		   		}
+		   		break;
 	   	}
 	}
 }

@@ -36,9 +36,13 @@ public class MotionProfile {
 
 		ArrayList<Point2D> leftWheel = new ArrayList<Point2D>();
 		ArrayList<Point2D> rightWheel = new ArrayList<Point2D>();
-
-		Point2D[] S1 = findControlPoints(s1, s2, s3);
-		Point2D[] S2 = findControlPoints(s2, s3, s4);
+		Point2D[] S1 = new Point2D[2];
+		Point2D[] S2 = new Point2D[2];
+		
+		 S1 = findControlPoints(s1, s2, s3);
+		 S2 = findControlPoints(s2, s3, s4);
+		
+		System.out.println("Have ctrl pts");
 		double l1 = Math.floor(s1.distance(s2));
 		double l2 = Math.floor(s2.distance(s3));
 		double l3 = Math.floor(s3.distance(s4));
@@ -47,13 +51,22 @@ public class MotionProfile {
 
 		int ctr = (int) Math.floor(((l1 > 0 ? l1 : l2) + (l3 > 0 ? l3 : l2)) / step); // scale by step to change number
 																						// of points interpolated
-		Point2D p1 = (Point2D) s2.clone();
-		Point2D p2 = S1[1];
-		Point2D p3 = S2[0];
-		Point2D p4 = (Point2D) s3.clone();
+
+		Point2D p1 = new Point2D.Double();
+		Point2D p2 = new Point2D.Double();
+		Point2D p3 = new Point2D.Double();
+		Point2D p4 = new Point2D.Double();
+		
+		
+		 p1 = (Point2D) s2.clone();
+		 p2 = S1[1];
+		 p3 = S2[0];
+		 p4 = (Point2D) s3.clone();
+		System.out.println("Have more points");
 
 		// Now do actual bezier math
-		Point2D pf = p1;
+		Point2D pf = new Point2D.Double();
+		pf = p1;
 		double ss = 1.0 / (ctr + 1), ss2 = ss * ss, ss3 = ss2 * ss, pre1 = 3.0 * ss, pre2 = 3.0 * ss2, pre4 = 6.0 * ss2,
 				pre5 = 6.0 * ss3, tmp1x = p1.getX() - p2.getX() * 2.0 + p3.getX(),
 				tmp1y = p1.getY() - p2.getY() * 2.0 + p3.getY(),
@@ -72,7 +85,11 @@ public class MotionProfile {
 		boolean firstRight = true;
 		Point2D pt2 = (Point2D) pf.clone();
 		Point2D last_pt = (Point2D) pt2.clone();
+		System.out.println("Before loop");
+
 		while (ctr > 0) {
+			//System.out.println("Loop " + ctr);
+
 			ctr--;
 			pf.setLocation(pf.getX() + dfx, pf.getY() + dfy);
 			m_right = -1 * dfx / dfy;
@@ -107,6 +124,8 @@ public class MotionProfile {
 
 			//System.out.println(pf.getX() + ", " + pf.getY() + ", " + pt2.getX() + ", " + pt2.getY());
 		}
+		System.out.println("After loop");
+
 		pf.setLocation(p4.getX(), p4.getY());
 		leftWheel.add(pf);
 		m_right = -1 * dfx / dfy;
@@ -124,13 +143,18 @@ public class MotionProfile {
 	}
 
 
-	public void bezierPoints(ArrayList<Point2D> pts, double angleIn, double angleOut) {
-
+	public void bezierPoints(ArrayList<Point2D> pts, double angleIn, double angleOut, double maxSpeed, double minSpeed) {
+		maxSpeed *=  12 * Constants.revPerInch * 60;
+		minSpeed *= 12 * Constants.revPerInch * 60;
 		motionProfile = new ArrayList<double[]>();
 		pathLeft = new ArrayList<Double>();
 		pathRight = new ArrayList<Double>();
 		pathAngles = new ArrayList<Double>();
+		totalDistanceLeft = 0;
+		totalDistanceRight = 0;
 		
+		System.out.println("PL " + pathLeft.size() +"PR " + pathRight.size() +  "PA " + pathAngles.size());
+
 		/*
 		 * duplicate first and last points loop over sets of 4 points 0...3; 1...4, etc.
 		 */
@@ -145,24 +169,27 @@ public class MotionProfile {
 			
 			pts.add(0, startControl);
 			pts.add(endControl);
+			System.out.println("We have " + pts.size());
 			int pt_i = 0;
 			do {
 				plotBezierQuad(pts.get(pt_i), pts.get(pt_i + 1), pts.get(pt_i + 2), pts.get(pt_i + 3));
 				pt_i++;
 			} while ((pt_i + 3) < pts.size());
 			
+			System.out.println("PL " + pathLeft.size() +"PR " + pathRight.size() +  "PA " + pathAngles.size());
+
 			double distanceLeft = 0;
 			double distanceRight = 0;
 			double accDistance = 0;
 			double decDistance = 0;
-			double targetSpeed = Constants.maxSpeed;
+			double targetSpeed = maxSpeed;
 			double timeLeft = 0;
 			double maxDistance =0;
 			double totalDistance =0;
 			double speedLeft=0, speedRight = 0;
 			double cDistanceLeft=0, cDistanceRight = 0;
 			double timeRight = 0;
-			double accRevs=2;
+			double accRevs=3;
 			double angle = 0;
 			double[] motionProfileData = new double[6];
 
@@ -185,11 +212,11 @@ public class MotionProfile {
 				
 				maxDistance = Math.max(cDistanceLeft, cDistanceRight);
 				if(maxDistance < accDistance) {
-					targetSpeed = Constants.minSpeed+(Constants.maxSpeed-Constants.minSpeed)*maxDistance/accRevs;
+					targetSpeed = minSpeed+(maxSpeed-minSpeed)*maxDistance/accRevs;
 				}else if (maxDistance>=accDistance && maxDistance<=decDistance) {
-					targetSpeed=Constants.maxSpeed;
+					targetSpeed=maxSpeed;
 				}else {
-					targetSpeed = Constants.minSpeed+(Constants.maxSpeed-Constants.minSpeed)*(totalDistance-maxDistance)/accRevs;
+					targetSpeed = minSpeed+(maxSpeed-minSpeed)*(totalDistance-maxDistance)/accRevs;
 				}
 				//targetSpeed = maxSpeed;
 				
@@ -216,7 +243,7 @@ public class MotionProfile {
 				motionProfile.add(motionProfileData);
 
 			}
-			
+			System.out.println(totalDistanceLeft + " " + totalDistanceRight);
 
 
 		}

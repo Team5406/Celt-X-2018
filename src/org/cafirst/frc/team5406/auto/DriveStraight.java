@@ -187,7 +187,7 @@ public class DriveStraight  extends AutonomousRoutine{
 			  } else {
 			  }
 			  left.add(new Point2D.Double(0, 162));
-			  motionProfiler.bezierPoints(left, 0, 0);
+			  motionProfiler.bezierPoints(left, 0, 0, 5, 1);
 				
 			  _autoLoop.startPeriodic(0.005);
 			  autoStep++;

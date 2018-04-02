@@ -163,7 +163,7 @@ public class Robot extends IterativeRobot {
     	autonomousSelector.addObject("0 - Do Nothing", new DoNothing());
     	autonomousSelector.addDefault("1 - Drive Straight", new DriveStraight(robotDrive, robotIntake));
     	autonomousSelector.addDefault("2 - Front Switch", new AutoSwitchFront(robotDrive, robotIntake));
-    	autonomousSelector.addDefault("3 - Scale Auto Right", new AutoScale(robotDrive, robotIntake));
+    	autonomousSelector.addDefault("3 - Scale Auto Right", new AutoScaleRight(robotDrive, robotIntake));
     	SmartDashboard.putData("Autonomous", autonomousSelector);
 
     	

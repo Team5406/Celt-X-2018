@@ -287,7 +287,13 @@ public class Intake extends Subsystems{
 	    }
 	    public void wristSlightDown() {
 	    	_wristMotor.selectProfileSlot(1,0);
-	    	_wristMotor.set(ControlMode.MotionMagic, -475);
+	    	_wristMotor.set(ControlMode.MotionMagic, Constants.WRIST_PUNT);
+	    	wristUp = true;
+	    	manualWrist = false;
+	    }	    
+	    public void wristPuntMore() {
+	    	_wristMotor.selectProfileSlot(1,0);
+	    	_wristMotor.set(ControlMode.MotionMagic, Constants.WRIST_PUNT_MORE);
 	    	wristUp = true;
 	    	manualWrist = false;
 	    }
@@ -300,6 +306,12 @@ public class Intake extends Subsystems{
 	    public void wristDown() {
 	    	_wristMotor.selectProfileSlot(1,0);
 	    	_wristMotor.set(ControlMode.MotionMagic, Constants.WRIST_DOWN);
+	    	wristUp = false;
+	    	manualWrist = false;
+	    }
+	    public void wristDownMore() {
+	    	_wristMotor.selectProfileSlot(1,0);
+	    	_wristMotor.set(ControlMode.MotionMagic, Constants.WRIST_DOWN_MORE);
 	    	wristUp = false;
 	    	manualWrist = false;
 	    }
