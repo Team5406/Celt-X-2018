@@ -43,6 +43,7 @@ public final class Constants {
 	public static double GYRO_PID_I = 0.000;
 	public static double GYRO_PID_D = 0.125;
 	public static double WHEEL_BASE = 35.5;
+	public static double TICKS_PER_CIRCLE = 80000;
 	
 	public static String AXIS_IP = "10.54.6.11";
 	

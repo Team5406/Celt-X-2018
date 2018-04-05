@@ -164,18 +164,23 @@ public class Robot extends IterativeRobot {
     	autonomousSelector.addDefault("1 - Drive Straight", new DriveStraight(robotDrive, robotIntake));
     	autonomousSelector.addDefault("2 - Front Switch", new AutoSwitchFront(robotDrive, robotIntake));
     	autonomousSelector.addDefault("3 - Scale Auto Right", new AutoScaleRight(robotDrive, robotIntake));
+    	//autonomousSelector.addDefault("4 - Scale/Switch Auto Right", new AutoScaleSwitchRight(robotDrive, robotIntake));
+    	//autonomousSelector.addDefault("5 - Turn to Angle", new TurnToAngle(robotDrive, robotIntake));
     	SmartDashboard.putData("Autonomous", autonomousSelector);
 
     	
     	
     	robotIntake.setupMotors();
-    	robotIntake.zeroMotors();
+    	//robotIntake.zeroMotors();
     	robotDrive.setupMotors();
     }
 	@Override
     public void disabledPeriodic(){  
+    	SmartDashboard.putNumber("cubeDistance", robotIntake.cubeDistance());
 		selectedRoutine = (AutonomousRoutine) autonomousSelector.getSelected();
 		SmartDashboard.putString("Selected Autonomous", selectedRoutine.getName());
+		//SmartDashboard.putNumber("Heading", Constants.navX.getYaw());
+		
     }
 	
     public void disabledInit() {
@@ -190,6 +195,7 @@ public class Robot extends IterativeRobot {
     }
     
     public void teleopInit() {
+    	Constants.navX.zeroYaw();
     	robotIntake.setupMotors();
     	robotDrive.setupMotors();
     	robotIntake._wristMotor.set(ControlMode.MotionMagic, robotIntake._wristMotor.getSelectedSensorPosition(0));
@@ -201,6 +207,7 @@ public class Robot extends IterativeRobot {
      */
     
     public void teleopPeriodic() {
+    	SmartDashboard.putNumber("cubeDistance", robotIntake.cubeDistance());
     	gripState = GripState.FIRM;
     	//boolean armSet = false;
 		boolean elevatorOverrideNew = false;
@@ -504,6 +511,8 @@ public class Robot extends IterativeRobot {
     }
     
    public void autonomousPeriodic() {
+		//SmartDashboard.putNumber("Heading", Constants.navX.getYaw());
+
 	   selectedRoutine.periodic();
     }
    

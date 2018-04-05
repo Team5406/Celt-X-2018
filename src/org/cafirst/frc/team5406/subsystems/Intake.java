@@ -13,6 +13,11 @@ import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
+import com.ctre.phoenix.CANifier;
+
+
+
+
 
 
 public class Intake extends Subsystems{
@@ -52,6 +57,15 @@ public class Intake extends Subsystems{
     PolynomialRegression profileUpOut;
     PolynomialRegression profileDownIn;
     PolynomialRegression profileDownOut;
+  //public class
+    public static double distance;
+    public static CANifier canifier = new CANifier(0);
+
+    //teleop periodic
+
+
+
+
 
 	public Intake(){
     	gripSolenoidHigh = new Solenoid(Constants.GRIP_HIGH);
@@ -187,15 +201,15 @@ public class Intake extends Subsystems{
 		}
 	}
 	public void zeroMotors() {
-		/* zero the sensor */
+		/*// zero the sensor
     	_elevatorMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
     	_elevatorMotor.set(ControlMode.PercentOutput, 0);
-    	/* zero the sensor */
+    	 //zero the sensor
     	_armMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
     	_armMotor.set(ControlMode.PercentOutput, 0);
-    	/* zero the sensor */
+    	//zero the sensor 
     	_wristMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-    	_wristMotor.set(ControlMode.PercentOutput, 0);
+    	_wristMotor.set(ControlMode.PercentOutput, 0);*/
 	}
 	
 	public void spinIntake(double speed) {
@@ -366,5 +380,11 @@ public class Intake extends Subsystems{
 	    
 	    public void shiftElevator(boolean state) {
 	    	elevatorSolenoid.set(state);
+	    }
+	    
+	    public double cubeDistance() {
+	        double dutyCycleAndPeriod[]= {0,0};
+	        canifier.getPWMInput(CANifier.PWMChannel.PWMChannel0,dutyCycleAndPeriod);
+	        return dutyCycleAndPeriod[0]/100;	
 	    }
 }

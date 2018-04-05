@@ -223,7 +223,7 @@ public class AutoScaleRight  extends AutonomousRoutine{
         targetTime = 0;
         motionProfiler.motionProfile = new ArrayList<double[]>();
  		drivePathDone = false;
-         autoStep = 0;
+         autoStep = 1;
          Constants.navX.zeroYaw();
          wristUpDelay = 0;
          autoDelay =0;
@@ -247,7 +247,7 @@ public class AutoScaleRight  extends AutonomousRoutine{
 		switch(autoStep) {
 	   	case 0:
 
-			if(!robotIntake.wristZeroed) {
+			/*if(!robotIntake.wristZeroed) {
 				robotIntake._wristMotor.configForwardSoftLimitEnable(false, Constants.kTimeoutMs);
 				robotIntake._wristMotor.configReverseSoftLimitEnable(false, Constants.kTimeoutMs);
 				robotIntake._wristMotor.set(0.5);
@@ -289,7 +289,7 @@ public class AutoScaleRight  extends AutonomousRoutine{
 			}
 			if(robotIntake.elevatorZeroed && robotIntake.armZeroed && robotIntake.wristZeroed) {
 				autoStep++;
-			}
+			}*/
 			
 			
 			break;
@@ -315,8 +315,8 @@ public class AutoScaleRight  extends AutonomousRoutine{
 				  left.add(new Point2D.Double(-33, 264));
 				  motionProfiler.bezierPoints(left, 0, -15, 10, 2);
 			  } else {
-				  left.add(new Point2D.Double(0, 200));
-				  left.add(new Point2D.Double(-165, 240));
+				  left.add(new Point2D.Double(5, 190));
+				  left.add(new Point2D.Double(-165, 230));
 				  left.add(new Point2D.Double(-189, 294));
 				  motionProfiler.bezierPoints(left, 0, 11, 10, 2);
 			  }
@@ -378,8 +378,8 @@ public class AutoScaleRight  extends AutonomousRoutine{
 			  left.add(new Point2D.Double(-10, 52));
 			  motionProfiler.bezierPoints(left, -15, -5, 10, 1);
 		  } else {
-			  left.add(new Point2D.Double(0, 44));
-			  motionProfiler.bezierPoints(left, 10, 5, 10, 1);
+			  left.add(new Point2D.Double(0, 58));
+			  motionProfiler.bezierPoints(left, 15, 5, 10, 1);
 		  }
 		  
 		  driveBackwards = false;
@@ -407,7 +407,7 @@ public class AutoScaleRight  extends AutonomousRoutine{
 	   		if(robotIntake.getArmPosition() < 200) {
 	   		_notifier.stop();
 	   		robotIntake.wristDownMore();
-	   		robotIntake.spinIntake(-500);
+	   		robotIntake.spinIntake(-200);
 			autoStep++;
 	   		}
 	   break;
@@ -441,8 +441,8 @@ public class AutoScaleRight  extends AutonomousRoutine{
 			  left.add(new Point2D.Double(0, 52));
 			  motionProfiler.bezierPoints(left, 0, -20, 10, 1);
 		  } else {
-			  left.add(new Point2D.Double(12, 36));
-			  motionProfiler.bezierPoints(left, 0, 10, 10, 1);
+			  left.add(new Point2D.Double(0, 58));
+			  motionProfiler.bezierPoints(left, 5, 20, 10, 1);
 		  }
 		  
 		  driveBackwards = true;
@@ -489,8 +489,9 @@ public class AutoScaleRight  extends AutonomousRoutine{
 			  left.add(new Point2D.Double(17, 60));
 			  motionProfiler.bezierPoints(left, -10, 7, 10, 1);
 		  } else {
-			  left.add(new Point2D.Double(-36, 36));
-			  motionProfiler.bezierPoints(left, 10, 0, 10, 1);
+			  left.add(new Point2D.Double(0, 15));
+			  left.add(new Point2D.Double(-35, 55));
+			  motionProfiler.bezierPoints(left, 0, -7, 10, 1);
 		  }
 		  
 		  driveBackwards = false;
@@ -518,7 +519,7 @@ public class AutoScaleRight  extends AutonomousRoutine{
 	   		if(robotIntake.getArmPosition() < 200) {
 	   		_notifier.stop();
 	   		robotIntake.wristDownMore();
-	   		robotIntake.spinIntake(-500);
+	   		robotIntake.spinIntake(-250);
 			autoStep++;
 	   		}
 	   break;
@@ -550,8 +551,8 @@ public class AutoScaleRight  extends AutonomousRoutine{
 			  left.add(new Point2D.Double(30, 54));
 			  motionProfiler.bezierPoints(left, 5, -20, 10, 1);
 		  } else {
-			  left.add(new Point2D.Double(12, 36));
-			  motionProfiler.bezierPoints(left, 0, 10, 10, 1);
+			  left.add(new Point2D.Double(-35, 55));
+			  motionProfiler.bezierPoints(left, -7, 20, 10, 1);
 		  }
 		  
 		  driveBackwards = true;
@@ -597,8 +598,8 @@ public class AutoScaleRight  extends AutonomousRoutine{
 			  left.add(new Point2D.Double(0, 10));
 			  motionProfiler.bezierPoints(left, 0, 0, 10, 1);
 		  } else {
-			  left.add(new Point2D.Double(-36, 36));
-			  motionProfiler.bezierPoints(left, 10, 0, 10, 1);
+			  left.add(new Point2D.Double(0, 10));
+			  motionProfiler.bezierPoints(left, 0, 0, 10, 1);
 		  }
 		  
 		  driveBackwards = false;
