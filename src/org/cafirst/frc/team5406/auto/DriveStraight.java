@@ -24,6 +24,7 @@ public class DriveStraight  extends AutonomousRoutine{
 	private boolean gearDelay = false;
 	private double[] robotPosition;
 	private int direction = 1;
+	boolean driveBackwards = false;
 	MotionProfile motionProfiler = new MotionProfile();
 	int wristUpDelay = 0;
 	boolean drivePathDone = false;
@@ -36,12 +37,12 @@ public class DriveStraight  extends AutonomousRoutine{
     	private double accumI = 0.0;
     	public double lastAngle = 0;
     	private double previousError = 0.0;
+    	boolean droveLast = false;
     	
     	
-    	
-	    public void run() {
-	    	
-	    	double leftSpeed = 0;
+    	public void run() {
+
+			double leftSpeed = 0;
 			double rightSpeed = 0;
 			double dSpeed = 0;
 			double speedChangeMultiplier = 0;
@@ -49,34 +50,100 @@ public class DriveStraight  extends AutonomousRoutine{
 			double targetSpeedRight = 0;
 			double currentAngle = Constants.navX.getYaw();
 
-		    
-	    	
-	    	if(!drivePathDone) {
-	    		System.out.println("Cur:" +  currentAngle + "Tar:"+ motionProfiler.motionProfile.get(lastPoint)[5]);
-				speedChangeMultiplier = calcSpeed(motionProfiler.motionProfile.get(lastPoint)[5] - currentAngle);
-	    		double elapsedTime = Timer.getFPGATimestamp() - startTime; 	
-		    	int numPoints = motionProfiler.motionProfile.size();
-		    	if (elapsedTime > targetTime) {
-		    		if(lastPoint < numPoints -2) {
-		    			//System.out.println(lastPoint + ", " + motionProfile.get(lastPoint)[2]/1000 + ", " + motionProfile.get(lastPoint)[1]/1000);
-			    		targetTime += motionProfiler.motionProfile.get(lastPoint)[0]/1000;
-			    		targetSpeedLeft = motionProfiler.motionProfile.get(lastPoint)[2]*(4096/600)*Constants.driveGearRatio;
-						leftSpeed =targetSpeedLeft+Math.signum(targetSpeedLeft)*targetSpeedLeft*speedChangeMultiplier; //-1*400-1200 = -1800
-			    		targetSpeedRight = motionProfiler.motionProfile.get(lastPoint)[4]*(4096/600)*Constants.driveGearRatio;
-						rightSpeed = targetSpeedRight-Math.signum(targetSpeedRight)*targetSpeedRight*speedChangeMultiplier; //400-1200 = -800
-						System.out.println("LS: "+ leftSpeed + ", LT: " + targetSpeedLeft + ", LA:" + robotDrive._frontLeftMotor.getSelectedSensorVelocity(0) + ", RS: "+ rightSpeed + ", RT: " + targetSpeedRight + ", RA:" + robotDrive._frontRightMotor.getSelectedSensorVelocity(0));
-			    		robotDrive._frontRightMotor.set(ControlMode.Velocity,rightSpeed);
-			    		robotDrive._frontLeftMotor.set(ControlMode.Velocity, leftSpeed);
-			    		lastPoint++;
-		    		}else {
-		    			robotDrive._frontLeftMotor.set(ControlMode.Velocity,0);
-		    			robotDrive._frontRightMotor.set(ControlMode.Velocity,0);
-		    			drivePathDone = true;
-		    		}
-		    	}
-	    	}
+			if (!drivePathDone) {
+				double elapsedTime = Timer.getFPGATimestamp() - startTime;
+				/*System.out.println("eTime: " + elapsedTime + "tTime: " + targetTime + "Cur:" + currentAngle + "Tar:"
+						+ motionProfiler.motionProfile.get(lastPoint)[5]);*/
+				int numPoints = motionProfiler.motionProfile.size();
+				if (elapsedTime > targetTime || droveLast) {
+					if (lastPoint < numPoints - 2) {
+						speedChangeMultiplier = calcSpeed(motionProfiler.motionProfile.get(lastPoint)[5] - currentAngle);
+						if (elapsedTime > targetTime + motionProfiler.motionProfile.get(lastPoint)[0] / 1000) {
+							targetSpeedLeft = 0;
+							targetSpeedRight = 0;
+							double profilesSkipped = 0;
 
-	    }
+							while (elapsedTime > targetTime + motionProfiler.motionProfile.get(lastPoint)[0] / 1000) {
+								profilesSkipped += motionProfiler.motionProfile.get(lastPoint)[0] / 1000;
+								targetTime += motionProfiler.motionProfile.get(lastPoint)[0] / 1000;
+
+								targetSpeedLeft += (motionProfiler.motionProfile.get(lastPoint)[0] / 1000)
+										* motionProfiler.motionProfile.get(lastPoint)[2] * (4096 / 600)
+										* Constants.driveGearRatio;
+								targetSpeedRight += (motionProfiler.motionProfile.get(lastPoint)[0] / 1000)
+										* motionProfiler.motionProfile.get(lastPoint)[4] * (4096 / 600)
+										* Constants.driveGearRatio;
+								lastPoint++;
+							}
+
+							double leftOverTime = elapsedTime - targetTime;
+							profilesSkipped += leftOverTime;
+
+							targetSpeedLeft += leftOverTime * motionProfiler.motionProfile.get(lastPoint)[2]
+									* (4096 / 600) * Constants.driveGearRatio;
+							targetSpeedLeft /= profilesSkipped;
+							leftSpeed = targetSpeedLeft
+									+ Math.signum(targetSpeedLeft) * targetSpeedLeft * speedChangeMultiplier; // -1*400-1200
+																												// =
+																												// -1800
+							targetSpeedRight += leftOverTime * motionProfiler.motionProfile.get(lastPoint)[4]
+									* (4096 / 600) * Constants.driveGearRatio;
+							targetSpeedRight /= profilesSkipped;
+							rightSpeed = targetSpeedRight
+									- Math.signum(targetSpeedRight) * targetSpeedRight * speedChangeMultiplier; // 400-1200
+																												// =
+																												// -800
+
+							droveLast = true;
+
+							/*System.out.println(lastPoint + " (" + (numPoints - 2) + "), "
+									+ motionProfiler.motionProfile.get(lastPoint)[0] / 1000
+									+ +motionProfiler.motionProfile.get(lastPoint)[2] + ", "
+									+ motionProfiler.motionProfile.get(lastPoint)[1]);*/
+						} else {
+							droveLast = false;
+							targetTime += motionProfiler.motionProfile.get(lastPoint)[0] / 1000;
+							targetSpeedLeft = motionProfiler.motionProfile.get(lastPoint)[2] * (4096 / 600)
+									* Constants.driveGearRatio;
+							leftSpeed = targetSpeedLeft
+									+ Math.signum(targetSpeedLeft) * targetSpeedLeft * speedChangeMultiplier; // -1*400-1200
+																												// =
+																												// -1800
+							targetSpeedRight = motionProfiler.motionProfile.get(lastPoint)[4] * (4096 / 600)
+									* Constants.driveGearRatio;
+							rightSpeed = targetSpeedRight
+									- Math.signum(targetSpeedRight) * targetSpeedRight * speedChangeMultiplier; // 400-1200
+																												// =
+																												// -800
+
+							/*System.out.println("LS: " + leftSpeed + ", LT: " + targetSpeedLeft + ", LA:"
+									+ robotDrive._frontLeftMotor.getSelectedSensorVelocity(0) + ", RS: " + rightSpeed
+									+ ", RT: " + targetSpeedRight + ", RA:"
+									+ robotDrive._frontRightMotor.getSelectedSensorVelocity(0));*/
+							lastPoint++;
+						}
+						
+						if(driveBackwards) {
+							robotDrive._frontRightMotor.set(ControlMode.Velocity, -1 * leftSpeed);
+							robotDrive._frontLeftMotor.set(ControlMode.Velocity, -1 * rightSpeed);
+						}else {
+							robotDrive._frontRightMotor.set(ControlMode.Velocity, rightSpeed);
+							robotDrive._frontLeftMotor.set(ControlMode.Velocity, leftSpeed);
+						}
+							
+							
+					} else {
+						robotDrive._frontLeftMotor.set(ControlMode.Velocity, 0);
+						robotDrive._frontRightMotor.set(ControlMode.Velocity, 0);
+						drivePathDone = true;
+
+						System.out.println("DELTA TIME: " + elapsedTime);
+					}
+				}
+			}
+
+		}
+    	
 	    
 	    public double calcSpeed(double currentError){
 			
@@ -187,6 +254,7 @@ public class DriveStraight  extends AutonomousRoutine{
 			  } else {
 			  }
 			  left.add(new Point2D.Double(0, 162));
+			  driveBackwards = true;
 			  motionProfiler.bezierPoints(left, 0, 0, 5, 1);
 				
 			  _autoLoop.startPeriodic(0.005);

@@ -57,10 +57,10 @@ public class AutoSwitchFront  extends AutonomousRoutine{
 				double elapsedTime = Timer.getFPGATimestamp() - startTime;
 				/*System.out.println("eTime: " + elapsedTime + "tTime: " + targetTime + "Cur:" + currentAngle + "Tar:"
 						+ motionProfiler.motionProfile.get(lastPoint)[5]);*/
-				speedChangeMultiplier = calcSpeed(motionProfiler.motionProfile.get(lastPoint)[5] - currentAngle);
 				int numPoints = motionProfiler.motionProfile.size();
 				if (elapsedTime > targetTime || droveLast) {
 					if (lastPoint < numPoints - 2) {
+						speedChangeMultiplier = calcSpeed(motionProfiler.motionProfile.get(lastPoint)[5] - currentAngle);
 
 						if (elapsedTime > targetTime + motionProfiler.motionProfile.get(lastPoint)[0] / 1000) {
 							targetSpeedLeft = 0;
@@ -256,11 +256,11 @@ public class AutoSwitchFront  extends AutonomousRoutine{
 				
 			  if(gameData.charAt(0) == 'L')
 			  {
-				  left.add(new Point2D.Double(-80, 129));
+				  left.add(new Point2D.Double(-60, 115));
 				  motionProfiler.bezierPoints(left, 0, 5, 9, 1);
 			  } else {
-				  left.add(new Point2D.Double(40, 128));
-				  motionProfiler.bezierPoints(left, 0, -5, 9, 1);
+				  left.add(new Point2D.Double(40, 113));
+				  motionProfiler.bezierPoints(left, 0, -5, 9, 2);
 			  }
 			  driveBackwards = false;
 			  _autoLoop.startPeriodic(0.005);
@@ -304,11 +304,11 @@ public class AutoSwitchFront  extends AutonomousRoutine{
 			
 			  if(gameData.charAt(0) == 'L')
 			  {
-				  left.add(new Point2D.Double(-35, 119));
+				  left.add(new Point2D.Double(-38, 105));
 				  motionProfiler.bezierPoints(left, 5, 0, 9, 1);
 			  } else {
-				  left.add(new Point2D.Double(75, 118));
-				  motionProfiler.bezierPoints(left, -5, 0, 9, 1);
+				  left.add(new Point2D.Double(35, 103));
+				  motionProfiler.bezierPoints(left, -5, 0, 9, 2);
 			  }
 		  
 		  driveBackwards = true;
@@ -334,8 +334,8 @@ public class AutoSwitchFront  extends AutonomousRoutine{
 					left.add(new Point2D.Double(0, 65));
 					motionProfiler.bezierPoints(left, 0, 0, 9, 1);
 				} else {
-					left.add(new Point2D.Double(0, 65));
-					motionProfiler.bezierPoints(left, 0, 0, 9, 1);
+					left.add(new Point2D.Double(0, 60));
+					motionProfiler.bezierPoints(left, 0, 0, 9, 2);
 				}
 
 				driveBackwards = false;
@@ -375,11 +375,11 @@ public class AutoSwitchFront  extends AutonomousRoutine{
 			
 			  if(gameData.charAt(0) == 'L')
 			  {
-				  left.add(new Point2D.Double(0, 65));
+				  left.add(new Point2D.Double(0, 64));
 				  motionProfiler.bezierPoints(left, 0, 0, 9, 1);
 			  } else {
-				  left.add(new Point2D.Double(0, 65));
-				  motionProfiler.bezierPoints(left, 0, 0, 9, 1);
+				  left.add(new Point2D.Double(0, 60));
+				  motionProfiler.bezierPoints(left, 0, 0, 9, 2);
 			  }
 		  
 		  driveBackwards = true;
@@ -403,11 +403,11 @@ public class AutoSwitchFront  extends AutonomousRoutine{
 					
 				  if(gameData.charAt(0) == 'L')
 				  {
-					  left.add(new Point2D.Double(-80, 121));
+					  left.add(new Point2D.Double(-52, 115));
 					  motionProfiler.bezierPoints(left, 0, 5, 9, 1);
 				  } else {
-					  left.add(new Point2D.Double(44, 120));
-					  motionProfiler.bezierPoints(left, 0, -5, 9, 1);
+					  left.add(new Point2D.Double(45, 115));
+					  motionProfiler.bezierPoints(left, 0, -5, 9, 2);
 				  }
 				  driveBackwards = false;
 				  _autoLoop.startPeriodic(0.005);
@@ -416,6 +416,7 @@ public class AutoSwitchFront  extends AutonomousRoutine{
 	           break;
 		   	case 10:
 		   		if(drivePathDone) {
+		   			_autoLoop.stop();
 		   			robotIntake.wristPuntMore();
 	   	   		robotIntake.needsWristUp = true;
 	   	   		if(robotIntake._wristMotor.getSelectedSensorPosition(0) < -350) {

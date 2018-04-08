@@ -13,6 +13,7 @@ import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.wpilibj.SPI;
 
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.Solenoid;
@@ -113,7 +114,7 @@ public class Robot extends IterativeRobot {
 	private SendableChooser<Object> autonomousSelector = new SendableChooser<>();
 
     
-    
+    int rumbleTime =0 ; 
 	
     class PeriodicRunnable implements java.lang.Runnable {
 	    public void run() { 
@@ -166,6 +167,8 @@ public class Robot extends IterativeRobot {
     	autonomousSelector.addDefault("3 - Scale Auto Right", new AutoScaleRight(robotDrive, robotIntake));
     	//autonomousSelector.addDefault("4 - Scale/Switch Auto Right", new AutoScaleSwitchRight(robotDrive, robotIntake));
     	//autonomousSelector.addDefault("5 - Turn to Angle", new TurnToAngle(robotDrive, robotIntake));
+    	autonomousSelector.addDefault("6 - Switch with Scale Prep", new AutoSwitchScalePrep(robotDrive, robotIntake));
+    	autonomousSelector.addDefault("7 - Near Scale OR Switch", new AutoNearScaleOrSwitch(robotDrive, robotIntake));
     	SmartDashboard.putData("Autonomous", autonomousSelector);
 
     	
@@ -207,7 +210,7 @@ public class Robot extends IterativeRobot {
      */
     
     public void teleopPeriodic() {
-    	SmartDashboard.putNumber("cubeDistance", robotIntake.cubeDistance());
+    	
     	gripState = GripState.FIRM;
     	//boolean armSet = false;
 		boolean elevatorOverrideNew = false;
@@ -220,10 +223,27 @@ public class Robot extends IterativeRobot {
 		// long wristPos = robotIntake._wristMotor.getSelectedSensorPosition(0);
 		
 		
+		double cubeDistance = robotIntake.cubeDistance();
 		
-
-
-
+    	SmartDashboard.putNumber("cubeDistance", cubeDistance);
+    	rumbleTime++;
+    	if(cubeDistance < 15 && rumbleTime < 40) {
+    		operatorGamepad.setRumble(RumbleType.kLeftRumble, 1);
+    		operatorGamepad.setRumble(RumbleType.kRightRumble, 1);
+    		driverGamepad.setRumble(RumbleType.kLeftRumble, 1);
+    		driverGamepad.setRumble(RumbleType.kRightRumble, 1);
+    	}else if(cubeDistance >= 15) {
+    		operatorGamepad.setRumble(RumbleType.kLeftRumble, 0);
+    		operatorGamepad.setRumble(RumbleType.kRightRumble, 0);
+    		driverGamepad.setRumble(RumbleType.kLeftRumble, 0);
+    		driverGamepad.setRumble(RumbleType.kRightRumble, 0);
+    		rumbleTime = 0;
+    	}else {
+    		operatorGamepad.setRumble(RumbleType.kLeftRumble, 0);
+    		operatorGamepad.setRumble(RumbleType.kRightRumble, 0);
+    		driverGamepad.setRumble(RumbleType.kLeftRumble, 0);
+    		driverGamepad.setRumble(RumbleType.kRightRumble, 0);
+    	}
     	
 		
     	/*******************************

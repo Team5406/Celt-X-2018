@@ -4,9 +4,10 @@ import org.cafirst.frc.team5406.robot.Constants;
 import org.cafirst.frc.team5406.subsystems.Drive;
 import org.cafirst.frc.team5406.subsystems.Intake;
 import org.cafirst.frc.team5406.auto.MotionProfile;
-import org.cafirst.frc.team5406.auto.AutoSwitchFront.AutoRunnable;
-
 import com.ctre.phoenix.motorcontrol.ControlMode;
+
+import org.cafirst.frc.team5406.util.AccelFilter;
+import org.cafirst.frc.team5406.util.PID;
 
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Notifier;
@@ -19,18 +20,21 @@ import org.cafirst.frc.team5406.auto.AutonomousRoutine;
 
 
 
-public class AutoScaleRight  extends AutonomousRoutine{
+public class AutoSwitchScalePrep  extends AutonomousRoutine{
 	private Intake robotIntake;
 	private Drive robotDrive;
 	private int autoStep = 0;
 	private boolean gearDelay = false;
 	private double[] robotPosition;
 	private int direction = 1;
-    int flipWrist = 0;
-    double pathComplete = 0;
-
     String gameData;
 	ArrayList<Point2D> left = new ArrayList<Point2D>();
+	
+    private PID turnToAnglePid = new PID();
+    private AccelFilter turnAccelFilter = new AccelFilter(0.04);	
+    int k = 0;
+	private boolean turnToFirstRun = true;
+
 
 	boolean driveBackwards = false;
 	MotionProfile motionProfiler = new MotionProfile();
@@ -39,35 +43,7 @@ public class AutoScaleRight  extends AutonomousRoutine{
         double startTime = 0;
         int lastPoint = 0;
         double targetTime = 0;
-        int autoDelay =0;
-        class PeriodicRunnable implements java.lang.Runnable {
-    	    public void run() { 
-
-    	    	int armPos;
-    	    	
-    	    	switch (flipWrist) {
-    	    	case 1:
-    	    		robotIntake._wristMotor.selectProfileSlot(0,0);
-    	    		armPos = robotIntake.getArmPosition();
-    	    		robotIntake._wristMotor.set(ControlMode.MotionMagic, robotIntake.wristFlipPosDown(armPos));
-    	    		if(armPos < 100) {
-    	    			flipWrist = 5;
-    	    		}
-    	    		break;
-    	    	case 3:
-    	    		robotIntake._wristMotor.selectProfileSlot(0,0);
-    	    		armPos = robotIntake.getArmPosition();
-    	    		robotIntake._wristMotor.set(ControlMode.MotionMagic, robotIntake.wristFlipPosUp(armPos));
-    	    		if(armPos > Constants.ARM_UP - 100) {
-    	    			flipWrist = 5;
-    	    		}
-    	    		break;
-    	    		
-    	    	}
-
-    	    }
-    	}
-    	Notifier _notifier = new Notifier(new PeriodicRunnable());
+    		
         class AutoRunnable implements java.lang.Runnable {
     	private double targetAngle;
     	private double accumI = 0.0;
@@ -87,17 +63,13 @@ public class AutoScaleRight  extends AutonomousRoutine{
 			double currentAngle = Constants.navX.getYaw();
 
 			if (!drivePathDone) {
-
 				double elapsedTime = Timer.getFPGATimestamp() - startTime;
 				/*System.out.println("eTime: " + elapsedTime + "tTime: " + targetTime + "Cur:" + currentAngle + "Tar:"
 						+ motionProfiler.motionProfile.get(lastPoint)[5]);*/
 				int numPoints = motionProfiler.motionProfile.size();
-				pathComplete = (double)lastPoint/numPoints;
-				System.out.println(lastPoint + "/" + numPoints);
 				if (elapsedTime > targetTime || droveLast) {
 					if (lastPoint < numPoints - 2) {
 						speedChangeMultiplier = calcSpeed(motionProfiler.motionProfile.get(lastPoint)[5] - currentAngle);
-
 						if (elapsedTime > targetTime + motionProfiler.motionProfile.get(lastPoint)[0] / 1000) {
 							targetSpeedLeft = 0;
 							targetSpeedRight = 0;
@@ -176,7 +148,6 @@ public class AutoScaleRight  extends AutonomousRoutine{
 						robotDrive._frontLeftMotor.set(ControlMode.Velocity, 0);
 						robotDrive._frontRightMotor.set(ControlMode.Velocity, 0);
 						drivePathDone = true;
-						_autoLoop.stop();
 
 						System.out.println("DELTA TIME: " + elapsedTime);
 					}
@@ -206,8 +177,8 @@ public class AutoScaleRight  extends AutonomousRoutine{
 	}
 	Notifier _autoLoop = new Notifier(new AutoRunnable());
 
-	public AutoScaleRight(Drive _robotDrive, Intake _robotIntake){
-		super("3 - Scale Auto Right");
+	public AutoSwitchScalePrep(Drive _robotDrive, Intake _robotIntake){
+		super("6 - Switch with Scale Prep");
 		robotDrive = _robotDrive;
 		robotIntake = _robotIntake;
 	}
@@ -223,28 +194,20 @@ public class AutoScaleRight  extends AutonomousRoutine{
          lastPoint = 0;
         targetTime = 0;
         motionProfiler.motionProfile = new ArrayList<double[]>();
+    	turnToAnglePid.setConstants(Constants.GYRO_PID_P, Constants.GYRO_PID_I, Constants.GYRO_PID_D);
+
  		drivePathDone = false;
          autoStep = 0;
          Constants.navX.zeroYaw();
          wristUpDelay = 0;
-         autoDelay =0;
-	    	robotIntake._armMotor.configMotionAcceleration(6000, Constants.kTimeoutMs);
-	    	robotIntake._wristMotor.configMotionAcceleration(6000, Constants.kTimeoutMs);
-	    	robotIntake._elevatorMotor.configMotionAcceleration(75000, Constants.kTimeoutMs);
-			robotIntake.compressor.stop();
-
 	}
 	
 	public void end(){
 		_autoLoop.stop();
-		robotIntake.compressor.start();
-    	robotIntake._armMotor.configMotionAcceleration(12000, Constants.kTimeoutMs);
-    	robotIntake._wristMotor.configMotionAcceleration(8000, Constants.kTimeoutMs);
-    	robotIntake._elevatorMotor.configMotionAcceleration(100000, Constants.kTimeoutMs);
-
 	}
 
 	public void periodic(){
+//		System.out.println(autoStep);
 		switch(autoStep) {
 	   	case 0:
 
@@ -288,99 +251,127 @@ public class AutoScaleRight  extends AutonomousRoutine{
 					robotIntake.elevatorZeroed = true;
 				}
 			}
+			
 			if(robotIntake.elevatorZeroed && robotIntake.armZeroed && robotIntake.wristZeroed) {
 				autoStep++;
 			}
-			
-			
 			break;
 	   	case 1:
-	   		autoDelay++;
-	   		if(autoDelay > 1) {
-	   			autoStep++;
-	   		}
-	   		break;
-	   	case 2:
-	   		//drive forward, cube 1
 	   	   gameData = DriverStation.getInstance().getGameSpecificMessage();
            if(gameData.length() > 0)
            {
-           	startTime = Timer.getFPGATimestamp();
-            lastPoint = 0;
-            targetTime = 0;
-    		drivePathDone = false;
-        	   left = new ArrayList<Point2D>();
+        	   
+        	   ArrayList<Point2D> left = new ArrayList<Point2D>();
         	   left.add(new Point2D.Double(0, 0));
-        	   autoStep++;
-			  if(gameData.charAt(1) == 'R'){
-				  left.add(new Point2D.Double(15, 170));
-				  left.add(new Point2D.Double(-31, 260));
-				  motionProfiler.bezierPoints(left, 0, -15, 10, 2);
+				
+			  if(gameData.charAt(0) == 'L')
+			  {
+				  left.add(new Point2D.Double(-55, 115));
+				  motionProfiler.bezierPoints(left, 0, 5, 9, 1);
 			  } else {
-				  left.add(new Point2D.Double(5, 190));
-				  left.add(new Point2D.Double(-175, 195));
-				  left.add(new Point2D.Double(-215, 245));
-				  motionProfiler.bezierPoints(left, 0, 0, 10, 2);
+				  left.add(new Point2D.Double(40, 113));
+				  motionProfiler.bezierPoints(left, 0, -5, 9, 2);
 			  }
-			  
-			  
-			  driveBackwards = true;
+			  driveBackwards = false;
 			  _autoLoop.startPeriodic(0.005);
+			  autoStep++;
            }
            break;
-	   	case 3:
-	   	//arm position, cube 1
- 		System.out.println(pathComplete);
-	   	if(pathComplete > 0.60) {
-
-			//robotIntake.wristUp();
-			robotIntake.armUp();
-			robotIntake.elevatorFast();
-			robotIntake.elevatorSwitchMid();
-			flipWrist =3;
-			robotIntake.wristOut = false;
-			_notifier.startPeriodic(0.005);
-			robotIntake.needsWristUp = false;	
-			autoStep++;
+	   	case 2:
+	   		if(drivePathDone) {
+	   			 _autoLoop.stop();
+	   			 autoStep++;
 	   		}
 	   		break;
+	   	case 3:
+			robotIntake.wristPuntMore();
+			robotIntake.needsWristUp = true;
+			if (robotIntake._wristMotor.getSelectedSensorPosition(0) < -350) {
+				robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+				robotIntake._intakeRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+				robotIntake.spinIntake(500);
+				autoStep++;
+			}
+	   		break;
 	   	case 4:
-	   		if(robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
-	   			_notifier.stop();
-	   			robotIntake._wristMotor.set(ControlMode.MotionMagic, -2400);
+	   		if(robotIntake._intakeLeftMotor.getSelectedSensorPosition(0) + robotIntake._intakeRightMotor.getSelectedSensorPosition(0)> 50000) {
+	   			robotIntake.spinIntake(0);
+	   			robotIntake.wristUp();
 	   			autoStep++;
 	   		}
 	   		break;
 	   	case 5:
-	   	//shoot, cube 1
+ 	        
+	    	robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+	    	robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+	    	startTime = Timer.getFPGATimestamp();
+	         lastPoint = 0;
+	        targetTime = 0;
+	 		drivePathDone = false;
+
+		   left = new ArrayList<Point2D>();
+    	   left.add(new Point2D.Double(0, 0));
+			
+			  if(gameData.charAt(0) == 'L')
+			  {
+				  left.add(new Point2D.Double(-35, 105));
+				  motionProfiler.bezierPoints(left, 5, 0, 9, 1);
+			  } else {
+				  left.add(new Point2D.Double(35, 103));
+				  motionProfiler.bezierPoints(left, -5, 0, 9, 2);
+			  }
+		  
+		  driveBackwards = true;
+		  _autoLoop.startPeriodic(0.005);
+		  autoStep++;
+		  break;
+		  
+	   	case 6:
+			if (drivePathDone) {
+				  _autoLoop.stop();
+				robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+				robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+				startTime = Timer.getFPGATimestamp();
+				lastPoint = 0;
+				targetTime = 0;
+				motionProfiler.motionProfile = new ArrayList<double[]>();
+				drivePathDone = false;
+
+				left = new ArrayList<Point2D>();
+				left.add(new Point2D.Double(0, 0));
+
+				if (gameData.charAt(0) == 'L') {
+					left.add(new Point2D.Double(0, 65));
+					motionProfiler.bezierPoints(left, 0, 0, 9, 1);
+				} else {
+					left.add(new Point2D.Double(0, 60));
+					motionProfiler.bezierPoints(left, 0, 0, 9, 2);
+				}
+
+				driveBackwards = false;
+				robotIntake.wristDownMore();
+				robotIntake.gripOpen();
+				robotIntake.spinIntake(-400);
+				_autoLoop.startPeriodic(0.005);
+				autoStep++;
+			}
+		  break;
+	   	case 7:
 	   		if(drivePathDone) {
-	   			_autoLoop.stop();
-	   			robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-	   		
-	    	robotIntake._intakeRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-	    	if(gameData.charAt(1) == 'R'){
-	   			robotIntake.spinIntake(180);
-	   		}else {
-	   			robotIntake.spinIntake(100);
-	   		}
-	   		autoStep++;
-	   		wristUpDelay=0;
+				  _autoLoop.stop();
+		   		robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+		    	robotIntake._intakeRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+	   			robotIntake.gripFirm();
+	   			autoStep++;
+	   			wristUpDelay=0;
 	   		}
 	   		break;
-		 case 6:
-			//arm down, cube 2
-	   			robotIntake.gripOpen();
-	   			robotIntake.armDown();
-				robotIntake.wristOut = true;
-				flipWrist =1;
-				_notifier.startPeriodic(0.005);
-				autoStep++;
-		   		break;
-	   	case 7:
-	   	//drive forward, cube 2
-	   		if(robotIntake._intakeLeftMotor.getSelectedSensorPosition(0) + robotIntake._intakeRightMotor.getSelectedSensorPosition(0)> 8000) {
-	   			robotIntake.spinIntake(0);
+	   	case 8:
 
+	   		wristUpDelay++;
+	   		if(wristUpDelay > 20) {
+	   			robotIntake.spinIntake(0);
+	   			robotIntake.wristUp();
 	    	robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
 	    	robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
 	    	startTime = Timer.getFPGATimestamp();
@@ -392,251 +383,140 @@ public class AutoScaleRight  extends AutonomousRoutine{
 		   left = new ArrayList<Point2D>();
     	   left.add(new Point2D.Double(0, 0));
 			
-		  if(gameData.charAt(1) == 'R'){
-			  left.add(new Point2D.Double(8, 57));
-			  motionProfiler.bezierPoints(left, 0, 0, 8, 2);
-		  } else {
-			  left.add(new Point2D.Double(-5, 75));
-			  motionProfiler.bezierPoints(left, 0, -5, 8, 2);
-		  }
+			  if(gameData.charAt(0) == 'L')
+			  {
+				  left.add(new Point2D.Double(0, 64));
+				  motionProfiler.bezierPoints(left, 0, 0, 9, 1);
+			  } else {
+				  left.add(new Point2D.Double(0, 60));
+				  motionProfiler.bezierPoints(left, 0, 0, 9, 2);
+			  }
 		  
-		  driveBackwards = false;
+		  driveBackwards = true;
 		  _autoLoop.startPeriodic(0.005);
 		  autoStep++;
-		  
 	   		}
 		  break;
+	   	case 9:
+	   		if(drivePathDone) {
+	   			_autoLoop.stop();
+		    	robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+		    	robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+		    	startTime = Timer.getFPGATimestamp();
+		         lastPoint = 0;
+		        targetTime = 0;
+		        motionProfiler.motionProfile = new ArrayList<double[]>();
+		 		drivePathDone = false;
 
-	   	case 8:
-			   wristUpDelay++;
-			   if(wristUpDelay > 10) {
-					robotIntake.elevatorFast();
-					robotIntake.elevatorDown();
-					autoStep++;
+	        	   ArrayList<Point2D> left = new ArrayList<Point2D>();
+	        	   left.add(new Point2D.Double(0, 0));
+					
+				  if(gameData.charAt(1) == 'L')
+				  {
+					  left.add(new Point2D.Double(-105, 85));
+					  motionProfiler.bezierPoints(left, 0, -45, 9, 2);
+				  } else {
+					  left.add(new Point2D.Double(95, 85));
+					  motionProfiler.bezierPoints(left, 0, 45, 9, 2);
+				  }
+				  driveBackwards = false;
+				  _autoLoop.startPeriodic(0.005);
+				  autoStep++;
+	   		}
+	           break;
+		   	case 10:
+		   		if(drivePathDone) {
+		   			_autoLoop.stop();
+		   			robotIntake.spinIntake(0);
+		   			autoStep++;
+		   			turnToFirstRun = true;
 		   		}
-	   break;
-	   case 9:
-	   		if(robotIntake.getArmPosition() < 200) {
-	   		_notifier.stop();
-	   		robotIntake.wristDownMore();
-	   		robotIntake.spinIntake(-200);
-			autoStep++;
-	   		}
-	   break;
-	   case 10:
-	   		if(drivePathDone) {
-				  _autoLoop.stop();
-		   		robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-		    	robotIntake._intakeRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-	   			robotIntake.gripFirm();
-	   			autoStep++;
-	   			wristUpDelay=0;
-	   		}
-	   		break;
-	   case 11:
-		   wristUpDelay++;
-		   if(wristUpDelay > 20) {
-	   			robotIntake.spinIntake(0);
+		   		break;
+		   	/*case 11:
+					if(turnToAngle(180)) {
+			   			autoStep++;
+			   		}
+					break;
+			case 12:
+		   		if(drivePathDone) {
+		   			_autoLoop.stop();
+			    	robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+			    	robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+			    	startTime = Timer.getFPGATimestamp();
+			         lastPoint = 0;
+			        targetTime = 0;
+			        motionProfiler.motionProfile = new ArrayList<double[]>();
+			 		drivePathDone = false;
 
-	    	robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-	    	robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-	    	startTime = Timer.getFPGATimestamp();
-	         lastPoint = 0;
-	        targetTime = 0;
-	        motionProfiler.motionProfile = new ArrayList<double[]>();
-	 		drivePathDone = false;
-
-		   left = new ArrayList<Point2D>();
-  	   left.add(new Point2D.Double(0, 0));
-			
-		  if(gameData.charAt(1) == 'R'){
-			  left.add(new Point2D.Double(5, 47));
-			  motionProfiler.bezierPoints(left, 0, 0, 8, 1);
-		  } else {
-			  left.add(new Point2D.Double(5, 70));
-			  motionProfiler.bezierPoints(left, 5, 10, 8, 2);
-		  }
-		  
-		  driveBackwards = true;
-		  _autoLoop.startPeriodic(0.005);
-		  autoStep++;
-		   }
-		  break;
-	   case 12:
-	   			robotIntake.armUp();
-				robotIntake.elevatorFast();
-				robotIntake.elevatorSwitchMid();
-				flipWrist =3;
-				robotIntake.wristOut = false;
-				_notifier.startPeriodic(0.005);
-				robotIntake.needsWristUp = false;	
-				autoStep++;
-				break;
-
-	   case 13:
-	   		if(drivePathDone && robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
-	   		_notifier.stop();
-	   		_autoLoop.stop();
-	   		if(gameData.charAt(1) == 'R'){
-	   			robotIntake.spinIntake(150);
-	   		}else {
-	   			robotIntake.spinIntake(50);
-	   		}
-  			robotIntake.gripOpen();
-			autoStep++;
-	   		}
-	   break;
-
-	   case 14:
-		   if(gameData.charAt(1) == 'R') {
-	    	robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-	    	robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-	    	startTime = Timer.getFPGATimestamp();
-	         lastPoint = 0;
-	        targetTime = 0;
-	        motionProfiler.motionProfile = new ArrayList<double[]>();
-	 		drivePathDone = false;
-
-		   left = new ArrayList<Point2D>();
-   	   left.add(new Point2D.Double(0, 0));
-
-			  left.add(new Point2D.Double(0, 15));
-			  left.add(new Point2D.Double(65, 48));
-			  motionProfiler.bezierPoints(left, 0, 0, 8, 2);
-		  
-		  driveBackwards = false;
-		  _autoLoop.startPeriodic(0.005);
-		  autoStep++;
-		  wristUpDelay=0;
-		   }else {
-			   autoStep=21;
-		   }
-		  break;
-	   case 15:
-		   wristUpDelay++;
-		   if(wristUpDelay > 15) {
-	   		//if(robotIntake._intakeLeftMotor.getSelectedSensorPosition(0) + robotIntake._intakeRightMotor.getSelectedSensorPosition(0)> 20) {
-	   			robotIntake.spinIntake(0);
-	   			robotIntake.armDown();
-				robotIntake.elevatorFast();
-				robotIntake.elevatorDown();
-				robotIntake.wristOut = true;
-				flipWrist =1;
-				_notifier.startPeriodic(0.005);
-				autoStep++;
-				wristUpDelay=0;
-	   		}
-	   		break;
-	   case 16:
-	   		if(robotIntake.getArmPosition() < 200) {
-	   		_notifier.stop();
-	   		robotIntake.wristDownMore();
-	   		robotIntake.spinIntake(-200);
-	   		robotIntake.gripOpen();
-			autoStep++;
-	   		}
-	   break;
-	   case 17:
-	   		if(drivePathDone) {
-				_autoLoop.stop();
-		   		robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-		    	robotIntake._intakeRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-	   			robotIntake.gripFirm();
-	   			autoStep++;
-	   			wristUpDelay=0;
-	   		}
-	   		break;
-	   case 18:
-		   wristUpDelay++;
-		   if(wristUpDelay > 20) {
-	    	robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-	    	robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-	    	startTime = Timer.getFPGATimestamp();
-	         lastPoint = 0;
-	        targetTime = 0;
-	        motionProfiler.motionProfile = new ArrayList<double[]>();
-	 		drivePathDone = false;
-
-		   left = new ArrayList<Point2D>();
-  	   left.add(new Point2D.Double(0, 0));
-			
-		  if(gameData.charAt(1) == 'R'){
-			  left.add(new Point2D.Double(25, 40));
-			  motionProfiler.bezierPoints(left, 5, -20, 10, 1);
-		  } else {
-			  left.add(new Point2D.Double(-24, 62));
-			  motionProfiler.bezierPoints(left, 0, 20, 10, 2);
-		  }
-		  
-		  driveBackwards = true;
-		  _autoLoop.startPeriodic(0.005);
-		  autoStep++;
-		   }
-		  break;
-	   case 19:
-	   			robotIntake.spinIntake(0);
-	   			robotIntake.armUp();
-				robotIntake.elevatorFast();
-				robotIntake.elevatorSwitchMid();
-				flipWrist =3;
-				robotIntake.wristOut = false;
-				_notifier.startPeriodic(0.005);
-				robotIntake.needsWristUp = false;	
-				autoStep++;
-				break;
-
-	   case 20:
-	   		if(drivePathDone && robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
-	   		_notifier.stop();
-	   		_autoLoop.stop();
-	   		robotIntake.spinIntake(100);
-  			robotIntake.gripOpen();
-			autoStep++;
-	   		}
-	   break;
-	   case 21:
-		   
-	    	robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-	    	robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-	    	startTime = Timer.getFPGATimestamp();
-	         lastPoint = 0;
-	        targetTime = 0;
-	        motionProfiler.motionProfile = new ArrayList<double[]>();
-	 		drivePathDone = false;
-
-		   left = new ArrayList<Point2D>();
-  	   left.add(new Point2D.Double(0, 0));
-			
-		  if(gameData.charAt(1) == 'R'){
-			  left.add(new Point2D.Double(0, 10));
-			  motionProfiler.bezierPoints(left, 0, 0, 10, 1);
-		  } else {
-			  left.add(new Point2D.Double(0, 10));
-			  motionProfiler.bezierPoints(left, 0, 0, 10, 2);
-		  }
-		  
-		  driveBackwards = false;
-		  _autoLoop.startPeriodic(0.005);
-		  autoStep++;
-		  wristUpDelay=0;
-		  
-		  break;
-	   case 22:
-		  wristUpDelay++;
-		  if(wristUpDelay > 15) {
-	   		//if(robotIntake._intakeLeftMotor.getSelectedSensorPosition(0) + robotIntake._intakeRightMotor.getSelectedSensorPosition(0)> 20) {
-	   			robotIntake.spinIntake(0);
-	   			robotIntake.armDown();
-	  			robotIntake.gripFirm();
-				robotIntake.elevatorFast();
-				robotIntake.elevatorDown();
-				robotIntake.wristOut = false;
-				flipWrist =1;
-				_notifier.startPeriodic(0.005);
-				autoStep++;
-	   		}
-	   		break;
+		        	   ArrayList<Point2D> left = new ArrayList<Point2D>();
+		        	   left.add(new Point2D.Double(0, 0));
+						
+					  if(gameData.charAt(1) == 'L')
+					  {
+						  left.add(new Point2D.Double(0, 45));
+						  motionProfiler.bezierPoints(left, 0, 0, 9, 2);
+					  } else {
+						  left.add(new Point2D.Double(0, 45));
+						  motionProfiler.bezierPoints(left, 0, 0, 9, 2);
+					  }
+					  driveBackwards = false;
+					  _autoLoop.startPeriodic(0.005);
+					  autoStep++;
+		   		}
+		           break;
+			   	case 13:
+			   		if(drivePathDone) {
+			   			_autoLoop.stop();
+			   			autoStep++;
+			   		}
+			   		break;*/
 	   	}
+	}
+	
+	public boolean turnToAngle(double angle){
+		if(turnToFirstRun){
+			turnToAnglePid.setDesiredPosition(angle);
+			turnToFirstRun = false;
+			turnAccelFilter.reset();
+			k = 0;
+		}
+		double currentAngle =  Constants.navX.getYaw(); //(navX.getYaw() + 180) % 360;
+		double speed = turnToAnglePid.calcSpeed(currentAngle);
+		turnAccelFilter.set(limitValue(speed, 1.0));
+		if(k++ < 1 / 0.03){
+			speed = turnAccelFilter.get();
+		}
+		speed = limitValue(applyMin(speed, 0.1), 1.0);
 		
+		
+		robotDrive._frontLeftMotor.set(speed);
+		robotDrive._frontRightMotor.set(-1*speed);
+
+		
+		return turnToAnglePid.isDone(currentAngle, 5);
+	}
+	
+	double applyMin(double value, double min){
+		if(value > -min && value < 0){
+			return -min;
+		}
+		else if(value < min && value >0){
+			return min;
+		}
+		else{
+			return value;
+		}
+	}
+	
+	double limitValue(double value, double limit){
+		if(value > limit){
+			return limit;
+		}
+		else if(value < -limit){
+			return -limit;
+		}
+		else{
+			return value;
+		}
 	}
 }
