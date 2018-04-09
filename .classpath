@@ -11,5 +11,6 @@
 	<classpathentry kind="var" path="USERLIBS_DIR/CTRE_Phoenix.jar" sourcepath="/CTRE_Phoenix.sources"/>
 	<classpathentry kind="var" path="USERLIBS_DIR/navx_frc.jar"/>
 	<classpathentry kind="lib" path="C:/Users/Chris/wpilib/user/java/lib/Jama-1.0.3.jar"/>
+	<classpathentry kind="var" path="USERLIBS_DIR/Jama-1.0.3.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

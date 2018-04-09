@@ -136,10 +136,10 @@ public class AutoNearScaleOrSwitch  extends AutonomousRoutine{
 
 							droveLast = true;
 
-							System.out.println(lastPoint + " (" + (numPoints - 2) + "), Time: "
+							/*System.out.println(lastPoint + " (" + (numPoints - 2) + "), Time: "
 									+ motionProfiler.motionProfile.get(lastPoint)[0] / 1000
 									+ "LT: " + motionProfiler.motionProfile.get(lastPoint)[2] + ", LA: " + robotDrive._frontLeftMotor.getSelectedSensorVelocity(0)
-									+ "RT:" + motionProfiler.motionProfile.get(lastPoint)[4] + ", RA: " + robotDrive._frontRightMotor.getSelectedSensorVelocity(0));
+									+ "RT:" + motionProfiler.motionProfile.get(lastPoint)[4] + ", RA: " + robotDrive._frontRightMotor.getSelectedSensorVelocity(0));*/
 						} else {
 							droveLast = false;
 							targetTime += motionProfiler.motionProfile.get(lastPoint)[0] / 1000;
@@ -156,10 +156,10 @@ public class AutoNearScaleOrSwitch  extends AutonomousRoutine{
 																												// =
 																												// -800
 
-							System.out.println(lastPoint + " (" + (numPoints - 2) + "), Time: "
+							/*System.out.println(lastPoint + " (" + (numPoints - 2) + "), Time: "
 									+ motionProfiler.motionProfile.get(lastPoint)[0] / 1000
 									+ "LT: " + motionProfiler.motionProfile.get(lastPoint)[2] + ", LA: " + robotDrive._frontLeftMotor.getSelectedSensorVelocity(0)
-									+ "RT:" + motionProfiler.motionProfile.get(lastPoint)[4] + ", RA: " + robotDrive._frontRightMotor.getSelectedSensorVelocity(0));
+									+ "RT:" + motionProfiler.motionProfile.get(lastPoint)[4] + ", RA: " + robotDrive._frontRightMotor.getSelectedSensorVelocity(0));*/
 							lastPoint++;
 						}
 						
@@ -224,13 +224,13 @@ public class AutoNearScaleOrSwitch  extends AutonomousRoutine{
         targetTime = 0;
         motionProfiler.motionProfile = new ArrayList<double[]>();
  		drivePathDone = false;
-         autoStep = 2;
+         autoStep = 0;
          Constants.navX.zeroYaw();
          wristUpDelay = 0;
          autoDelay =0;
-	    	/*robotIntake._armMotor.configMotionAcceleration(6000, Constants.kTimeoutMs);
+	    	robotIntake._armMotor.configMotionAcceleration(6000, Constants.kTimeoutMs);
 	    	robotIntake._wristMotor.configMotionAcceleration(6000, Constants.kTimeoutMs);
-	    	robotIntake._elevatorMotor.configMotionAcceleration(75000, Constants.kTimeoutMs);*/
+	    	robotIntake._elevatorMotor.configMotionAcceleration(75000, Constants.kTimeoutMs);
 			robotIntake.compressor.stop();
 
 	}
@@ -339,13 +339,13 @@ public class AutoNearScaleOrSwitch  extends AutonomousRoutine{
 				if (pathComplete > 0.60) {
 
 					// robotIntake.wristUp();
-					/*robotIntake.armUp();
+					robotIntake.armUp();
 					robotIntake.elevatorFast();
 					robotIntake.elevatorSwitchMid();
 					flipWrist = 3;
 					robotIntake.wristOut = false;
 					_notifier.startPeriodic(0.005);
-					robotIntake.needsWristUp = false;*/
+					robotIntake.needsWristUp = false;
 					autoStep++;
 				}
 			} else {
@@ -354,11 +354,11 @@ public class AutoNearScaleOrSwitch  extends AutonomousRoutine{
 	   		break;
 	   	case 4:
 	   		if(gameData.charAt(1) == 'R') {
-	   			//if(robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
-		   		//	_notifier.stop();
-		   		//	robotIntake._wristMotor.set(ControlMode.MotionMagic, -2400);
+	   			if(robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
+		   			_notifier.stop();
+		   			robotIntake._wristMotor.set(ControlMode.MotionMagic, -2400);
 		   			autoStep++;
-	   			//}
+	   			}
 	   		}else {
 	   			autoStep++;
 	   		}
@@ -368,17 +368,17 @@ public class AutoNearScaleOrSwitch  extends AutonomousRoutine{
 			if (drivePathDone) {
 				_autoLoop.stop();
 				if (gameData.charAt(1) == 'R') {
-					/*robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+					robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
 					robotIntake._intakeRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-					robotIntake.spinIntake(180);*/
+					robotIntake.spinIntake(190);
 					autoStep++;
 					wristUpDelay = 0;
 				} else {
-					/*robotIntake.armUp();
+					robotIntake.armUp();
 					flipWrist = 3;
 					robotIntake.wristOut = false;
 					_notifier.startPeriodic(0.005);
-					robotIntake.needsWristUp = false;*/
+					robotIntake.needsWristUp = false;
 					autoStep++;
 				}
 			}
@@ -386,25 +386,25 @@ public class AutoNearScaleOrSwitch  extends AutonomousRoutine{
 		 case 6:
 			//arm down, cube 2
 			 if (gameData.charAt(1) == 'R') {
-	   			/*robotIntake.gripOpen();
+	   			robotIntake.gripOpen();
 	   			robotIntake.armDown();
 				robotIntake.wristOut = true;
 				flipWrist =1;
-				_notifier.startPeriodic(0.005);*/
+				_notifier.startPeriodic(0.005);
 				autoStep++;
 			 }else {
-				// if(robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
-			   			/*_notifier.stop();
-			   			robotIntake._wristMotor.set(ControlMode.MotionMagic, -2400);*/
+				 if(robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
+			   			_notifier.stop();
+			   			robotIntake._wristMotor.set(ControlMode.MotionMagic, -2400);
 			   			autoStep++;
-		   			//}
+		   			}
 			 }
 		   		break;
 	   	case 7:
 	   	//drive forward, cube 2
 	   		if (gameData.charAt(1) == 'R') {
-	   		//if(robotIntake._intakeLeftMotor.getSelectedSensorPosition(0) + robotIntake._intakeRightMotor.getSelectedSensorPosition(0)> 8000) {
-	   		//	robotIntake.spinIntake(0);
+	   		if(robotIntake._intakeLeftMotor.getSelectedSensorPosition(0) + robotIntake._intakeRightMotor.getSelectedSensorPosition(0)> 8000) {
+	   			robotIntake.spinIntake(0);
 
 	    	robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
 	    	robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
@@ -425,49 +425,55 @@ public class AutoNearScaleOrSwitch  extends AutonomousRoutine{
 		  _autoLoop.startPeriodic(0.005);
 		  autoStep++;
 		  
-	   		//}
+	   		}
 	   		}else {
-	   			//robotIntake.gripOpen();
+	   			robotIntake.gripOpen();
+	   			wristUpDelay = 0;
+	   			autoStep++;
 	   		}
 		  break;
 
 	   	case 8:
+	   		wristUpDelay++;
 	   		if (gameData.charAt(1) == 'R') {
-			   wristUpDelay++;
-			   if(wristUpDelay > 10) {
-					//robotIntake.elevatorFast();
-					//robotIntake.elevatorDown();
+	   			if(wristUpDelay > 10) {
+					robotIntake.elevatorFast();
+					robotIntake.elevatorDown();
 					autoStep++;
 		   		}
 	   		}else {
-	   			/*robotIntake.armDown();
+	   			if(wristUpDelay > 100) {
+	   			robotIntake.armDown();
 	  			robotIntake.gripFirm();
 				robotIntake.wristOut = false;
 				flipWrist =1;
-				_notifier.startPeriodic(0.005);*/
+				_notifier.startPeriodic(0.005);
 				autoStep++;
+	   			}
 	   		}
 	   break;
 	   case 9:
 		   if (gameData.charAt(1) == 'R') {
-	   		//if(robotIntake.getArmPosition() < 200) {
-	   		/*_notifier.stop();
+	   		if(robotIntake.getArmPosition() < 200) {
+	   		_notifier.stop();
 	   		robotIntake.wristDownMore();
-	   		robotIntake.spinIntake(-200);*/
+	   		robotIntake.spinIntake(-200);
 			autoStep++;
-	   		//}
+	   		}
 		   }else {
-			   //_notifier.stop();
+			   if(robotIntake.getArmPosition() < 200) {
+			   _notifier.stop();
 	   			autoStep++;
+			   }
 		   }
 	   break;
 	   case 10:
 		   if (gameData.charAt(1) == 'R') {
 	   		if(drivePathDone) {
 				  _autoLoop.stop();
-		   		/*robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+		   		robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
 		    	robotIntake._intakeRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-	   			robotIntake.gripFirm();*/
+	   			robotIntake.gripFirm();
 	   			autoStep++;
 	   			wristUpDelay=0;
 	   		}
@@ -477,7 +483,7 @@ public class AutoNearScaleOrSwitch  extends AutonomousRoutine{
 		   if (gameData.charAt(1) == 'R') {
 		   wristUpDelay++;
 		   if(wristUpDelay > 20) {
-	   		//	robotIntake.spinIntake(0);
+	   			robotIntake.spinIntake(0);
 
 	    	robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
 	    	robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
@@ -502,25 +508,25 @@ public class AutoNearScaleOrSwitch  extends AutonomousRoutine{
 		  break;
 	   case 12:
 		   if (gameData.charAt(1) == 'R') {
-	   			/*robotIntake.armUp();
+	   			robotIntake.armUp();
 				robotIntake.elevatorFast();
 				robotIntake.elevatorSwitchMid();
 				flipWrist =3;
 				robotIntake.wristOut = false;
 				_notifier.startPeriodic(0.005);
-				robotIntake.needsWristUp = false;	*/
+				robotIntake.needsWristUp = false;
 				autoStep++;
 		   }
 				break;
 
 	   case 13:
 		   if (gameData.charAt(1) == 'R') {
-	   		if(drivePathDone) {// && robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
-	   		//_notifier.stop();
+	   		if(drivePathDone && robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
+	   		_notifier.stop();
 	   		_autoLoop.stop();
-	   			//robotIntake.spinIntake(150);
+	   			robotIntake.spinIntake(150);
 	   		
-  			//robotIntake.gripOpen();
+  			robotIntake.gripOpen();
 			autoStep++;
 	   		}
 		   }
@@ -554,37 +560,38 @@ public class AutoNearScaleOrSwitch  extends AutonomousRoutine{
 		   if (gameData.charAt(1) == 'R') {
 		   wristUpDelay++;
 		   if(wristUpDelay > 15) {
-	   		//if(robotIntake._intakeLeftMotor.getSelectedSensorPosition(0) + robotIntake._intakeRightMotor.getSelectedSensorPosition(0)> 20) {
-	   			/*robotIntake.spinIntake(0);
+	   		if(robotIntake._intakeLeftMotor.getSelectedSensorPosition(0) + robotIntake._intakeRightMotor.getSelectedSensorPosition(0)> 20) {
+	   			robotIntake.spinIntake(0);
 	   			robotIntake.armDown();
 				robotIntake.elevatorFast();
 				robotIntake.elevatorDown();
 				robotIntake.wristOut = true;
 				flipWrist =1;
-				_notifier.startPeriodic(0.005);*/
+				_notifier.startPeriodic(0.005);
 				autoStep++;
 				wristUpDelay=0;
 	   		}
 		   }
+		   }
 	   		break;
 	   case 16:
 		   if (gameData.charAt(1) == 'R') {
-	   		//if(robotIntake.getArmPosition() < 200) {
+	   		if(robotIntake.getArmPosition() < 200) {
 	   		_notifier.stop();
-	   		/*robotIntake.wristDownMore();
+	   		robotIntake.wristDownMore();
 	   		robotIntake.spinIntake(-200);
-	   		robotIntake.gripOpen();*/
+	   		robotIntake.gripOpen();
 			autoStep++;
-	   		//}
+	   		}
 		   }
 	   break;
 	   case 17:
 		   if (gameData.charAt(1) == 'R') {
 	   		if(drivePathDone) {
 				_autoLoop.stop();
-		   		/*robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+		   		robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
 		    	robotIntake._intakeRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-	   			robotIntake.gripFirm();*/
+	   			robotIntake.gripFirm();
 	   			autoStep++;
 	   			wristUpDelay=0;
 	   		}
@@ -606,7 +613,7 @@ public class AutoNearScaleOrSwitch  extends AutonomousRoutine{
   	   left.add(new Point2D.Double(0, 0));
 			
 			  left.add(new Point2D.Double(25, 40));
-			  motionProfiler.bezierPoints(left, 5, -20, 10, 1);
+			  motionProfiler.bezierPoints(left, 0, -25, 10, 1);
 		  
 		  
 		  driveBackwards = true;
@@ -617,25 +624,25 @@ public class AutoNearScaleOrSwitch  extends AutonomousRoutine{
 		  break;
 	   case 19:
 		   if (gameData.charAt(1) == 'R') {
-	   			/*robotIntake.spinIntake(0);
+	   			robotIntake.spinIntake(0);
 	   			robotIntake.armUp();
 				robotIntake.elevatorFast();
 				robotIntake.elevatorSwitchMid();
 				flipWrist =3;
 				robotIntake.wristOut = false;
 				_notifier.startPeriodic(0.005);
-				robotIntake.needsWristUp = false;	*/
+				robotIntake.needsWristUp = false;
 				autoStep++;
 		   }
 				break;
 
 	   case 20:
 		   if (gameData.charAt(1) == 'R') {
-	   		if(drivePathDone) { //&& robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
-	   		//_notifier.stop();
+	   		if(drivePathDone && robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
+	   		_notifier.stop();
 	   		_autoLoop.stop();
-	   		/*robotIntake.spinIntake(100);
-  			robotIntake.gripOpen();*/
+	   		robotIntake.spinIntake(50);
+  			robotIntake.gripOpen();
 			autoStep++;
 	   		}
 		   }
@@ -668,16 +675,17 @@ public class AutoNearScaleOrSwitch  extends AutonomousRoutine{
 		  wristUpDelay++;
 		  if(wristUpDelay > 15) {
 	   		//if(robotIntake._intakeLeftMotor.getSelectedSensorPosition(0) + robotIntake._intakeRightMotor.getSelectedSensorPosition(0)> 20) {
-	   			/*robotIntake.spinIntake(0);
+	   			robotIntake.spinIntake(0);
 	   			robotIntake.armDown();
 	  			robotIntake.gripFirm();
 				robotIntake.elevatorFast();
 				robotIntake.elevatorDown();
 				robotIntake.wristOut = false;
 				flipWrist =1;
-				_notifier.startPeriodic(0.005);*/
+				_notifier.startPeriodic(0.005);
 				autoStep++;
-	   		}
+	   		//}
+		   }
 		   }
 	   		break;
 	   	}

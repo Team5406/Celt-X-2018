@@ -19,7 +19,7 @@ import org.cafirst.frc.team5406.auto.AutonomousRoutine;
 
 
 
-public class AutoScaleRight  extends AutonomousRoutine{
+public class AutoSideRight  extends AutonomousRoutine{
 	private Intake robotIntake;
 	private Drive robotDrive;
 	private int autoStep = 0;
@@ -206,8 +206,8 @@ public class AutoScaleRight  extends AutonomousRoutine{
 	}
 	Notifier _autoLoop = new Notifier(new AutoRunnable());
 
-	public AutoScaleRight(Drive _robotDrive, Intake _robotIntake){
-		super("3 - Scale Auto Right");
+	public AutoSideRight(Drive _robotDrive, Intake _robotIntake){
+		super("8 - Side Scale");
 		robotDrive = _robotDrive;
 		robotIntake = _robotIntake;
 	}
@@ -317,11 +317,10 @@ public class AutoScaleRight  extends AutonomousRoutine{
 				  left.add(new Point2D.Double(-31, 260));
 				  motionProfiler.bezierPoints(left, 0, -15, 10, 2);
 			  } else {
-				  left.add(new Point2D.Double(5, 190));
-				  left.add(new Point2D.Double(-150, 210));
-				  left.add(new Point2D.Double(-160, 260));
-				  motionProfiler.bezierPoints(left, 0, 20, 9, 2);
-			  }
+				  left.add(new Point2D.Double(0, 162));
+				  motionProfiler.bezierPoints(left, 0, 0, 5, 1);
+					
+			 }
 			  
 			  
 			  driveBackwards = true;
@@ -330,6 +329,7 @@ public class AutoScaleRight  extends AutonomousRoutine{
            break;
 	   	case 3:
 	   	//arm position, cube 1
+	   		if(gameData.charAt(1) == 'R'){
  		System.out.println(pathComplete);
 	   	if(pathComplete > 0.60) {
 
@@ -343,41 +343,52 @@ public class AutoScaleRight  extends AutonomousRoutine{
 			robotIntake.needsWristUp = false;	
 			autoStep++;
 	   		}
+	   		}else {
+	   			if (drivePathDone) {
+					_autoLoop.stop();
+					autoStep=100;
+	   			}
+	   		}
 	   		break;
 	   	case 4:
+	   		if (gameData.charAt(1) == 'R') {
 	   		if(robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
 	   			_notifier.stop();
 	   			robotIntake._wristMotor.set(ControlMode.MotionMagic, -2400);
 	   			autoStep++;
 	   		}
+	   		}
 	   		break;
 	   	case 5:
 	   	//shoot, cube 1
-	   		if(drivePathDone) {
-	   			_autoLoop.stop();
-	   			robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-	   		
-	    	robotIntake._intakeRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
-	    	if(gameData.charAt(1) == 'R'){
-	   			robotIntake.spinIntake(190);
-	   		}else {
-	   			robotIntake.spinIntake(100);
-	   		}
-	   		autoStep++;
-	   		wristUpDelay=0;
-	   		}
+			if (gameData.charAt(1) == 'R') {
+				if (drivePathDone) {
+					_autoLoop.stop();
+					robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+
+					robotIntake._intakeRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
+
+					robotIntake.spinIntake(190);
+
+					autoStep++;
+					wristUpDelay = 0;
+				}
+			}
 	   		break;
 		 case 6:
 			//arm down, cube 2
+			 if (gameData.charAt(1) == 'R') {
 	   			robotIntake.gripOpen();
 	   			robotIntake.armDown();
 				robotIntake.wristOut = true;
 				flipWrist =1;
 				_notifier.startPeriodic(0.005);
 				autoStep++;
+			 }
 		   		break;
 	   	case 7:
 	   	//drive forward, cube 2
+	   		if (gameData.charAt(1) == 'R') {
 	   		if(robotIntake._intakeLeftMotor.getSelectedSensorPosition(0) + robotIntake._intakeRightMotor.getSelectedSensorPosition(0)> 8000) {
 	   			robotIntake.spinIntake(0);
 
@@ -392,38 +403,41 @@ public class AutoScaleRight  extends AutonomousRoutine{
 		   left = new ArrayList<Point2D>();
     	   left.add(new Point2D.Double(0, 0));
 			
-		  if(gameData.charAt(1) == 'R'){
+
 			  left.add(new Point2D.Double(8, 57));
 			  motionProfiler.bezierPoints(left, 0, 0, 8, 2);
-		  } else {
-			  left.add(new Point2D.Double(-5, 57));
-			  motionProfiler.bezierPoints(left, 0, -5, 8, 2);
-		  }
+
 		  
 		  driveBackwards = false;
 		  _autoLoop.startPeriodic(0.005);
 		  autoStep++;
 		  
 	   		}
+	   		}
 		  break;
 
 	   	case 8:
+	   		if (gameData.charAt(1) == 'R') {
 			   wristUpDelay++;
 			   if(wristUpDelay > 10) {
 					robotIntake.elevatorFast();
 					robotIntake.elevatorDown();
 					autoStep++;
 		   		}
+	   		}
 	   break;
 	   case 9:
+		   if (gameData.charAt(1) == 'R') {
 	   		if(robotIntake.getArmPosition() < 200) {
 	   		_notifier.stop();
 	   		robotIntake.wristDownMore();
 	   		robotIntake.spinIntake(-200);
 			autoStep++;
 	   		}
+		   }
 	   break;
 	   case 10:
+		   if (gameData.charAt(1) == 'R') {
 	   		if(drivePathDone) {
 				  _autoLoop.stop();
 		   		robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
@@ -432,8 +446,10 @@ public class AutoScaleRight  extends AutonomousRoutine{
 	   			autoStep++;
 	   			wristUpDelay=0;
 	   		}
+		   }
 	   		break;
 	   case 11:
+		   if (gameData.charAt(1) == 'R') {
 		   wristUpDelay++;
 		   if(wristUpDelay > 20) {
 	   			robotIntake.spinIntake(0);
@@ -449,20 +465,18 @@ public class AutoScaleRight  extends AutonomousRoutine{
 		   left = new ArrayList<Point2D>();
   	   left.add(new Point2D.Double(0, 0));
 			
-		  if(gameData.charAt(1) == 'R'){
 			  left.add(new Point2D.Double(5, 47));
 			  motionProfiler.bezierPoints(left, 0, 0, 8, 1);
-		  } else {
-			  left.add(new Point2D.Double(5, 57));
-			  motionProfiler.bezierPoints(left, 5, 10, 8, 2);
-		  }
+
 		  
 		  driveBackwards = true;
 		  _autoLoop.startPeriodic(0.005);
 		  autoStep++;
 		   }
+		   }
 		  break;
 	   case 12:
+		   if (gameData.charAt(1) == 'R') {
 	   			robotIntake.armUp();
 				robotIntake.elevatorFast();
 				robotIntake.elevatorSwitchMid();
@@ -471,20 +485,20 @@ public class AutoScaleRight  extends AutonomousRoutine{
 				_notifier.startPeriodic(0.005);
 				robotIntake.needsWristUp = false;	
 				autoStep++;
+		   }
 				break;
 
 	   case 13:
+		   if (gameData.charAt(1) == 'R') {
 	   		if(drivePathDone && robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
 	   		_notifier.stop();
 	   		_autoLoop.stop();
-	   		if(gameData.charAt(1) == 'R'){
 	   			robotIntake.spinIntake(150);
-	   		}else {
-	   			robotIntake.spinIntake(50);
-	   		}
+
   			robotIntake.gripOpen();
 			autoStep++;
 	   		}
+		   }
 	   break;
 
 	   case 14:
@@ -508,11 +522,10 @@ public class AutoScaleRight  extends AutonomousRoutine{
 		  _autoLoop.startPeriodic(0.005);
 		  autoStep++;
 		  wristUpDelay=0;
-		   }else {
-			   autoStep=21;
 		   }
 		  break;
 	   case 15:
+		   if (gameData.charAt(1) == 'R') {
 		   wristUpDelay++;
 		   if(wristUpDelay > 15) {
 	   		//if(robotIntake._intakeLeftMotor.getSelectedSensorPosition(0) + robotIntake._intakeRightMotor.getSelectedSensorPosition(0)> 20) {
@@ -526,8 +539,10 @@ public class AutoScaleRight  extends AutonomousRoutine{
 				autoStep++;
 				wristUpDelay=0;
 	   		}
+		   }
 	   		break;
 	   case 16:
+		   if (gameData.charAt(1) == 'R') {
 	   		if(robotIntake.getArmPosition() < 200) {
 	   		_notifier.stop();
 	   		robotIntake.wristDownMore();
@@ -535,8 +550,10 @@ public class AutoScaleRight  extends AutonomousRoutine{
 	   		robotIntake.gripOpen();
 			autoStep++;
 	   		}
+		   }
 	   break;
 	   case 17:
+		   if (gameData.charAt(1) == 'R') {
 	   		if(drivePathDone) {
 				_autoLoop.stop();
 		   		robotIntake._intakeLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
@@ -545,8 +562,10 @@ public class AutoScaleRight  extends AutonomousRoutine{
 	   			autoStep++;
 	   			wristUpDelay=0;
 	   		}
+		   }
 	   		break;
 	   case 18:
+		   if (gameData.charAt(1) == 'R') {
 		   wristUpDelay++;
 		   if(wristUpDelay > 20) {
 	    	robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
@@ -560,20 +579,18 @@ public class AutoScaleRight  extends AutonomousRoutine{
 		   left = new ArrayList<Point2D>();
   	   left.add(new Point2D.Double(0, 0));
 			
-		  if(gameData.charAt(1) == 'R'){
 			  left.add(new Point2D.Double(25, 40));
 			  motionProfiler.bezierPoints(left, 0, -25, 10, 1);
-		  } else {
-			  left.add(new Point2D.Double(-24, 62));
-			  motionProfiler.bezierPoints(left, 0, 20, 10, 2);
-		  }
+
 		  
 		  driveBackwards = true;
 		  _autoLoop.startPeriodic(0.005);
 		  autoStep++;
 		   }
+		   }
 		  break;
 	   case 19:
+		   if (gameData.charAt(1) == 'R') {
 	   			robotIntake.spinIntake(0);
 	   			robotIntake.armUp();
 				robotIntake.elevatorFast();
@@ -583,9 +600,11 @@ public class AutoScaleRight  extends AutonomousRoutine{
 				_notifier.startPeriodic(0.005);
 				robotIntake.needsWristUp = false;	
 				autoStep++;
+		   }
 				break;
 
 	   case 20:
+		   if (gameData.charAt(1) == 'R') {
 	   		if(drivePathDone && robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
 	   		_notifier.stop();
 	   		_autoLoop.stop();
@@ -593,9 +612,10 @@ public class AutoScaleRight  extends AutonomousRoutine{
   			robotIntake.gripOpen();
 			autoStep++;
 	   		}
+		   }
 	   break;
 	   case 21:
-		   
+		   if (gameData.charAt(1) == 'R') {
 	    	robotDrive._frontLeftMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
 	    	robotDrive._frontRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
 	    	startTime = Timer.getFPGATimestamp();
@@ -607,21 +627,18 @@ public class AutoScaleRight  extends AutonomousRoutine{
 		   left = new ArrayList<Point2D>();
   	   left.add(new Point2D.Double(0, 0));
 			
-		  if(gameData.charAt(1) == 'R'){
 			  left.add(new Point2D.Double(0, 10));
 			  motionProfiler.bezierPoints(left, 0, 0, 10, 1);
-		  } else {
-			  left.add(new Point2D.Double(0, 10));
-			  motionProfiler.bezierPoints(left, 0, 0, 10, 2);
-		  }
+
 		  
 		  driveBackwards = false;
 		  _autoLoop.startPeriodic(0.005);
 		  autoStep++;
 		  wristUpDelay=0;
-		  
+		   }
 		  break;
 	   case 22:
+		   if (gameData.charAt(1) == 'R') {
 		  wristUpDelay++;
 		  if(wristUpDelay > 15) {
 	   		//if(robotIntake._intakeLeftMotor.getSelectedSensorPosition(0) + robotIntake._intakeRightMotor.getSelectedSensorPosition(0)> 20) {
@@ -635,6 +652,7 @@ public class AutoScaleRight  extends AutonomousRoutine{
 				_notifier.startPeriodic(0.005);
 				autoStep++;
 	   		}
+		   }
 	   		break;
 	   	}
 		

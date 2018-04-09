@@ -162,13 +162,14 @@ public class Robot extends IterativeRobot {
     	/* take our extra talons and just have them follow the Talons updated in arcadeDrive */
     	selectedRoutine = new DriveStraight(robotDrive, robotIntake);
     	autonomousSelector.addObject("0 - Do Nothing", new DoNothing());
-    	autonomousSelector.addDefault("1 - Drive Straight", new DriveStraight(robotDrive, robotIntake));
-    	autonomousSelector.addDefault("2 - Front Switch", new AutoSwitchFront(robotDrive, robotIntake));
-    	autonomousSelector.addDefault("3 - Scale Auto Right", new AutoScaleRight(robotDrive, robotIntake));
+    	autonomousSelector.addObject("1 - Drive Straight", new DriveStraight(robotDrive, robotIntake));
+    	autonomousSelector.addObject("2 - Front Switch", new AutoSwitchFront(robotDrive, robotIntake));
+    	autonomousSelector.addObject("3 - Scale Auto Right", new AutoScaleRight(robotDrive, robotIntake));
     	//autonomousSelector.addDefault("4 - Scale/Switch Auto Right", new AutoScaleSwitchRight(robotDrive, robotIntake));
     	//autonomousSelector.addDefault("5 - Turn to Angle", new TurnToAngle(robotDrive, robotIntake));
-    	autonomousSelector.addDefault("6 - Switch with Scale Prep", new AutoSwitchScalePrep(robotDrive, robotIntake));
-    	autonomousSelector.addDefault("7 - Near Scale OR Switch", new AutoNearScaleOrSwitch(robotDrive, robotIntake));
+    	autonomousSelector.addObject("6 - Switch with Scale Prep", new AutoSwitchScalePrep(robotDrive, robotIntake));
+    	autonomousSelector.addObject("7 - Near Scale OR Switch", new AutoNearScaleOrSwitch(robotDrive, robotIntake));
+    	autonomousSelector.addDefault("8 - Side Scale", new AutoSideRight(robotDrive, robotIntake));
     	SmartDashboard.putData("Autonomous", autonomousSelector);
 
     	
