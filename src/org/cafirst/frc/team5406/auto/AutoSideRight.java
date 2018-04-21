@@ -515,7 +515,7 @@ public class AutoSideRight  extends AutonomousRoutine{
    	   left.add(new Point2D.Double(0, 0));
 
 			  left.add(new Point2D.Double(0, 15));
-			  left.add(new Point2D.Double(65, 48));
+			  left.add(new Point2D.Double(67, 49));
 			  motionProfiler.bezierPoints(left, 0, 0, 8, 2);
 		  
 		  driveBackwards = false;
