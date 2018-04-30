@@ -395,7 +395,7 @@ public class Robot extends IterativeRobot {
         	}else if (armPos > Constants.ARM_UP_THRESHOLD && robotIntake.getWristPosition() < Constants.WRIST_UP_SHOT_THRESHOLD) {
         		robotIntake.spinIntake(1000);
         	}else {
-        		robotIntake.spinIntake(operatorGamepad.getLeftTrigger()*175);
+        		robotIntake.spinIntake(operatorGamepad.getLeftTrigger()*175); //175 orig
         	}
         }else if(operatorGamepad.getRightTriggerPressed()) {
         	robotIntake.spinIntake(-1*operatorGamepad.getRightTrigger()*1000);

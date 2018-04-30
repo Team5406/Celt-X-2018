@@ -314,12 +314,12 @@ public class AutoScaleRight  extends AutonomousRoutine{
         	   autoStep++;
 			  if(gameData.charAt(1) == 'R'){
 				  left.add(new Point2D.Double(15, 170));
-				  left.add(new Point2D.Double(-31, 260));
+				  left.add(new Point2D.Double(-22, 267));
 				  motionProfiler.bezierPoints(left, 0, -15, 10, 2);
 			  } else {
-				  left.add(new Point2D.Double(5, 185));
-				  left.add(new Point2D.Double(-158, 210));
-				  left.add(new Point2D.Double(-166, 255));
+				  left.add(new Point2D.Double(5, 190));
+				  left.add(new Point2D.Double(-150, 220));
+				  left.add(new Point2D.Double(-155, 260));
 				  motionProfiler.bezierPoints(left, 0, 25, 9, 2);
 			  }
 			  
@@ -359,7 +359,7 @@ public class AutoScaleRight  extends AutonomousRoutine{
 	   		
 	    	robotIntake._intakeRightMotor.setSelectedSensorPosition(0, 0, Constants.kTimeoutMs);
 	    	if(gameData.charAt(1) == 'R'){
-	   			robotIntake.spinIntake(250);
+	   			robotIntake.spinIntake(210); //250
 	   		}else {
 	   			robotIntake.spinIntake(220);
 	   		}
@@ -396,7 +396,7 @@ public class AutoScaleRight  extends AutonomousRoutine{
 			  left.add(new Point2D.Double(9, 57));
 			  motionProfiler.bezierPoints(left, 0, 0, 8, 2);
 		  } else {
-			  left.add(new Point2D.Double(-11, 57));
+			  left.add(new Point2D.Double(-15, 57));
 			  motionProfiler.bezierPoints(left, 0, -10, 8, 2);
 		  }
 		  
@@ -453,7 +453,7 @@ public class AutoScaleRight  extends AutonomousRoutine{
 			  left.add(new Point2D.Double(5, 47));
 			  motionProfiler.bezierPoints(left, 0, 0, 8, 1);
 		  } else {
-			  left.add(new Point2D.Double(-1, 63));
+			  left.add(new Point2D.Double(-1, 65));
 			  motionProfiler.bezierPoints(left, -10, 30, 8, 2);
 		  }
 		  
@@ -475,14 +475,14 @@ public class AutoScaleRight  extends AutonomousRoutine{
 
 	   case 13:
 	   		if(drivePathDone && robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
+  			robotIntake.gripOpen();
 	   		_notifier.stop();
 	   		_autoLoop.stop();
 	   		if(gameData.charAt(1) == 'R'){
-	   			robotIntake.spinIntake(150);
+	   			robotIntake.spinIntake(90);
 	   		}else {
-	   			robotIntake.spinIntake(50);
+	   			robotIntake.spinIntake(40);
 	   		}
-  			robotIntake.gripOpen();
 			autoStep++;
 	   		}
 	   break;
@@ -501,8 +501,8 @@ public class AutoScaleRight  extends AutonomousRoutine{
    	   left.add(new Point2D.Double(0, 0));
 
 			  left.add(new Point2D.Double(0, 15));
-			  left.add(new Point2D.Double(75, 51));
-			  motionProfiler.bezierPoints(left, 0, 30, 8, 2);
+			  left.add(new Point2D.Double(65, 52));
+			  motionProfiler.bezierPoints(left, 0, 30, 7, 2);
 		  
 		  driveBackwards = false;
 		  _autoLoop.startPeriodic(0.005);
@@ -531,7 +531,7 @@ public class AutoScaleRight  extends AutonomousRoutine{
 	   		if(robotIntake.getArmPosition() < 200) {
 	   		_notifier.stop();
 	   		robotIntake.wristDownMore();
-	   		robotIntake.spinIntake(-200);
+	   		robotIntake.spinIntake(-1000);
 	   		robotIntake.gripOpen();
 			autoStep++;
 	   		}
@@ -562,7 +562,7 @@ public class AutoScaleRight  extends AutonomousRoutine{
 			
 		  if(gameData.charAt(1) == 'R'){
 			  left.add(new Point2D.Double(24, 40));
-			  motionProfiler.bezierPoints(left, 0, -40, 10, 1);
+			  motionProfiler.bezierPoints(left, 0, -45, 9, 1);
 		  } else {
 			  left.add(new Point2D.Double(-25, 63));
 			  motionProfiler.bezierPoints(left, 0, 15, 10, 2);
@@ -589,8 +589,8 @@ public class AutoScaleRight  extends AutonomousRoutine{
 	   		if(drivePathDone && robotIntake.getArmPosition() > Constants.ARM_UP - 300) {
 	   		_notifier.stop();
 	   		_autoLoop.stop();
-	   		robotIntake.spinIntake(50);
   			robotIntake.gripOpen();
+	   		robotIntake.spinIntake(25);
 			autoStep++;
 	   		}
 	   break;

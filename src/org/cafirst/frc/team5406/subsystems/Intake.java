@@ -97,12 +97,12 @@ public class Intake extends Subsystems{
 			_armMotor.configPeakCurrentDuration(30, Constants.kTimeoutMs);
 			_armMotor.enableCurrentLimit(true);
 			_intakeRightMotor.configContinuousCurrentLimit(40, Constants.kTimeoutMs);
-			_intakeRightMotor.configPeakCurrentLimit(40, Constants.kTimeoutMs);
-			_intakeRightMotor.configPeakCurrentDuration(40, Constants.kTimeoutMs);
+			_intakeRightMotor.configPeakCurrentLimit(50, Constants.kTimeoutMs);
+			_intakeRightMotor.configPeakCurrentDuration(20, Constants.kTimeoutMs);
 			_intakeRightMotor.enableCurrentLimit(true);
 			_intakeLeftMotor.configContinuousCurrentLimit(40, Constants.kTimeoutMs);
-			_intakeLeftMotor.configPeakCurrentLimit(40, Constants.kTimeoutMs);
-			_intakeLeftMotor.configPeakCurrentDuration(40, Constants.kTimeoutMs);
+			_intakeLeftMotor.configPeakCurrentLimit(50, Constants.kTimeoutMs);
+			_intakeLeftMotor.configPeakCurrentDuration(20, Constants.kTimeoutMs);
 			_intakeLeftMotor.enableCurrentLimit(true);
 			_wristMotor.configContinuousCurrentLimit(30, Constants.kTimeoutMs);
 			_wristMotor.configPeakCurrentLimit(30, Constants.kTimeoutMs);
@@ -172,14 +172,14 @@ public class Intake extends Subsystems{
 	    	//Intakes
 	    	_intakeLeftMotor.selectProfileSlot(0,0);
 	    	_intakeLeftMotor.config_kF(0, 0.128, Constants.kTimeoutMs);
-	    	_intakeLeftMotor.config_kP(0, 0.2, Constants.kTimeoutMs);
-	    	_intakeLeftMotor.config_kI(0, 0.0001, Constants.kTimeoutMs);
+	    	_intakeLeftMotor.config_kP(0, 0.4, Constants.kTimeoutMs);
+	    	_intakeLeftMotor.config_kI(0, 0.0002, Constants.kTimeoutMs);
 	    	_intakeLeftMotor.config_kD(0, 0, Constants.kTimeoutMs);
 
 	    	_intakeRightMotor.selectProfileSlot(0,0);
 	    	_intakeRightMotor.config_kF(0, 0.128, Constants.kTimeoutMs);
-	    	_intakeRightMotor.config_kP(0, 0.2, Constants.kTimeoutMs);
-	    	_intakeRightMotor.config_kI(0, 0.0001, Constants.kTimeoutMs);
+	    	_intakeRightMotor.config_kP(0, 0.4, Constants.kTimeoutMs);
+	    	_intakeRightMotor.config_kI(0, 0.0002, Constants.kTimeoutMs);
 	    	_intakeRightMotor.config_kD(0, 0, Constants.kTimeoutMs);
 
 			
